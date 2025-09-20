@@ -1,0 +1,73 @@
+# Pre-commit hooks configuration
+# See https://pre-commit.com for more information
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: mixed-line-ending
+
+  - repo: https://github.com/doublify/pre-commit-rust
+    rev: v1.0
+    hooks:
+      - id: fmt
+        name: Rust fmt
+        description: Run cargo fmt on Rust code
+        entry: cargo fmt
+        language: system
+        types: [rust]
+        pass_filenames: false
+
+      - id: clippy
+        name: Rust clippy
+        description: Run cargo clippy on Rust code
+        entry: cargo clippy
+        language: system
+        types: [rust]
+        pass_filenames: false
+        args: [--workspace, --all-targets, --all-features, --, -D, warnings]
+
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v3.0.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args: [optional-scope]
+
+  - repo: local
+    hooks:
+      - id: cargo-test
+        name: Cargo test
+        description: Run cargo test
+        entry: cargo test
+        language: system
+        types: [rust]
+        pass_filenames: false
+        stages: [push]
+
+      - id: cargo-audit
+        name: Cargo audit
+        description: Run cargo audit for security vulnerabilities
+        entry: cargo audit
+        language: system
+        types: [rust]
+        pass_filenames: false
+        stages: [push]
+
+      - id: cargo-deny
+        name: Cargo deny
+        description: Run cargo deny checks
+        entry: cargo deny check
+        language: system
+        types: [rust]
+        pass_filenames: false
+        stages: [push]

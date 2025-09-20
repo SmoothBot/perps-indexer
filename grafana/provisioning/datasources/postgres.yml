@@ -1,0 +1,17 @@
+apiVersion: 1
+
+datasources:
+  - name: PostgreSQL-Hyperliquid
+    type: postgres
+    access: proxy
+    url: postgres:5432
+    database: hl_indexer
+    user: postgres
+    secureJsonData:
+      password: postgres
+    jsonData:
+      sslmode: 'disable'
+      postgresVersion: 1600
+      timescaledb: false
+    editable: true
+    isDefault: true

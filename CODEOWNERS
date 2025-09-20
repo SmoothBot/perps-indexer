@@ -1,0 +1,25 @@
+# Global code owners
+* @rust-indexer-team
+
+# Core library
+/core/ @rust-indexer-team @core-maintainers
+
+# Indexer binary
+/indexer/ @rust-indexer-team @indexer-maintainers
+
+# Documentation
+/docs/ @rust-indexer-team @docs-team
+*.md @rust-indexer-team @docs-team
+
+# CI/CD and infrastructure
+/.github/ @rust-indexer-team @infra-team
+/Dockerfile @rust-indexer-team @infra-team
+/docker-compose.yml @rust-indexer-team @infra-team
+
+# Security-sensitive files
+/SECURITY.md @rust-indexer-team @security-team
+/deny.toml @rust-indexer-team @security-team
+
+# Release and configuration
+/Cargo.toml @rust-indexer-team @release-team
+/rust-toolchain.toml @rust-indexer-team @release-team

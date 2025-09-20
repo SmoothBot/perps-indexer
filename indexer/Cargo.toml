@@ -1,0 +1,58 @@
+[package]
+name = "indexer"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "indexer"
+path = "src/main.rs"
+
+[dependencies]
+# Internal
+indexer_core = { path = "../core" }
+
+# Async runtime
+tokio = { workspace = true }
+
+# Web & API
+reqwest = { workspace = true }
+
+# Database
+sqlx = { workspace = true }
+rust_decimal = { workspace = true }
+bigdecimal = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Observability
+tracing = { workspace = true }
+metrics = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# CLI
+clap = { workspace = true }
+
+# Utilities
+chrono = { workspace = true }
+uuid = { workspace = true }
+backoff = { workspace = true }
+futures = { workspace = true }
+bytes = { workspace = true }
+async-trait = { workspace = true }
+governor = { workspace = true }
+
+# AWS SDK
+aws-config = { workspace = true }
+aws-sdk-s3 = { workspace = true }
+
+# Compression
+lz4_flex = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }
+proptest = { workspace = true }
