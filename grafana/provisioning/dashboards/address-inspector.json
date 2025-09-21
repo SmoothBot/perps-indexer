@@ -147,7 +147,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  SUM(price * size) AS \"Total Volume\"\nFROM fills f JOIN markets m ON f.market_id = m.id\nWHERE user_address = '${address}'\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n  AND $__timeFilter(timestamp)",
+          "rawSql": "\nSELECT \n    SUM(f.price * f.size) as \"Volume\"\nFROM fills f\nJOIN markets m ON f.market_id = m.id\nWHERE \n    LOWER(f.user_address) = LOWER('${address}')\n    AND f.exchange_id = 1\n    AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n    AND $__timeFilter(f.timestamp)\n",
           "refId": "A"
         }
       ],
@@ -363,7 +363,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT \n  timestamp AS time,\n  SUM(closed_pnl) OVER (ORDER BY timestamp) AS cumulative_pnl\nFROM fills f JOIN markets m ON f.market_id = m.id\nWHERE user_address = '${address}'\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n  AND $__timeFilter(timestamp)\nORDER BY timestamp",
+          "rawSql": "\nSELECT \n    f.timestamp as time,\n    SUM(COALESCE(f.closed_pnl, 0)) OVER (ORDER BY f.timestamp) as \"Cumulative PnL\"\nFROM fills f\nJOIN markets m ON f.market_id = m.id\nWHERE \n    LOWER(f.user_address) = LOWER('${address}')\n    AND f.exchange_id = 1\n    AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n    AND $__timeFilter(f.timestamp)\nORDER BY f.timestamp\n",
           "refId": "A"
         }
       ],
@@ -383,11 +383,11 @@
           "custom": {
             "axisCenteredZero": false,
             "axisColorMode": "text",
-            "axisLabel": "Volume (USD)",
+            "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "bars",
-            "fillOpacity": 70,
+            "fillOpacity": 80,
             "gradientMode": "none",
             "hideFrom": {
               "tooltip": false,
@@ -423,7 +423,46 @@
           },
           "unit": "currencyUSD"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "buy_volume"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "Buy Volume"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "sell_volume"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "Sell Volume"
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 8,
@@ -453,7 +492,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT \n  DATE_TRUNC('hour', timestamp) AS time,\n  SUM(CASE WHEN side = 'Buy' THEN price * size ELSE 0 END) AS buy_volume,\n  SUM(CASE WHEN side = 'Sell' THEN price * size ELSE 0 END) AS sell_volume\nFROM fills f JOIN markets m ON f.market_id = m.id\nWHERE user_address = '${address}'\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n  AND $__timeFilter(timestamp)\nGROUP BY time\nORDER BY time",
+          "rawSql": "\nSELECT \n    date_trunc('hour', f.timestamp) as time,\n    SUM(CASE WHEN f.side = 'BUY' THEN f.price * f.size ELSE 0 END) as \"buy_volume\",\n    SUM(CASE WHEN f.side = 'SELL' THEN f.price * f.size ELSE 0 END) as \"sell_volume\"\nFROM fills f\nJOIN markets m ON f.market_id = m.id\nWHERE \n    LOWER(f.user_address) = LOWER('${address}')\n    AND f.exchange_id = 1\n    AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n    AND $__timeFilter(f.timestamp)\nGROUP BY 1\nORDER BY 1\n",
           "refId": "A"
         }
       ],
@@ -576,7 +615,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  m.symbol,\n  COUNT(*) AS trades,\n  SUM(price * size) AS volume,\n  SUM(closed_pnl) AS pnl,\n  SUM(fee) AS fees,\n  AVG(price) AS avg_price\nFROM fills f JOIN markets m ON f.market_id = m.id\nWHERE user_address = '${address}'\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n  AND $__timeFilter(timestamp)\nGROUP BY m.symbol\nORDER BY volume DESC",
+          "rawSql": "\nSELECT \n    COALESCE(m.symbol, 'Unknown') as \"Coin\",\n    COUNT(*) as \"Trades\",\n    SUM(f.price * f.size) as \"Volume\",\n    SUM(COALESCE(f.closed_pnl, 0)) as \"PnL\",\n    SUM(COALESCE(f.fee, 0)) as \"Fees\"\nFROM fills f\nLEFT JOIN markets m ON f.market_id = m.id\nWHERE \n    LOWER(f.user_address) = LOWER('${address}')\n    AND f.exchange_id = 1\n    AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n    AND $__timeFilter(f.timestamp)\nGROUP BY COALESCE(m.symbol, 'Unknown')\nORDER BY \"Volume\" DESC\n",
           "refId": "A"
         }
       ],
@@ -590,9 +629,6 @@
       },
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
           "custom": {
             "hideFrom": {
               "tooltip": false,
@@ -613,6 +649,18 @@
       },
       "id": 8,
       "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "pieType": "pie",
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
         "legend": {
           "displayMode": "table",
           "placement": "right",
@@ -622,11 +670,16 @@
             "percent"
           ]
         },
-        "pieType": "pie",
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
+        "displayLabels": [
+          "percent"
+        ],
+        "legendDisplayMode": "table",
+        "legendPlacement": "right",
+        "legendShowLegend": true,
+        "legendValues": [
+          "value",
+          "percent"
+        ]
       },
       "targets": [
         {
@@ -635,10 +688,11 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "format": "table",
+          "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT \n  m.symbol,\n  SUM(price * size) AS volume\nFROM fills f JOIN markets m ON f.market_id = m.id\nWHERE user_address = '${address}'\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n  AND $__timeFilter(timestamp)\nGROUP BY m.symbol\nORDER BY volume DESC\nLIMIT 15",
-          "refId": "A"
+          "rawSql": "\nSELECT \n    NOW() as time,\n    COALESCE(m.symbol, 'Unknown') as metric,\n    SUM(f.price * f.size)::float as value\nFROM fills f\nLEFT JOIN markets m ON f.market_id = m.id\nWHERE \n    LOWER(f.user_address) = LOWER('${address}')\n    AND f.exchange_id = 1\n    AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n    AND $__timeFilter(f.timestamp)\nGROUP BY m.symbol\nHAVING SUM(f.price * f.size) > 0\nORDER BY value DESC\nLIMIT 15\n",
+          "refId": "A",
+          "alias": "$2"
         }
       ],
       "title": "Volume Distribution by Coin",
@@ -772,7 +826,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  timestamp,\n  m.symbol,\n  side,\n  price,\n  size,\n  closed_pnl,\n  fee,\n  fill_id\nFROM fills f JOIN markets m ON f.market_id = m.id\nWHERE user_address = '${address}'\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n  AND $__timeFilter(timestamp)\nORDER BY timestamp DESC\nLIMIT 100",
+          "rawSql": "\nSELECT \n    f.timestamp as \"Time\",\n    COALESCE(m.symbol, 'Unknown') as \"Coin\",\n    f.side as \"Side\",\n    f.price as \"Price\",\n    f.size as \"Size\",\n    f.price * f.size as \"Volume\",\n    COALESCE(f.fee, 0) as \"Fee\",\n    COALESCE(f.closed_pnl, 0) as \"PnL\"\nFROM fills f\nLEFT JOIN markets m ON f.market_id = m.id\nWHERE \n    LOWER(f.user_address) = LOWER('${address}')\n    AND f.exchange_id = 1\n    AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n    AND $__timeFilter(f.timestamp)\nORDER BY f.timestamp DESC\nLIMIT 100\n",
           "refId": "A"
         }
       ],
@@ -966,7 +1020,7 @@
       "type": "timeseries"
     }
   ],
-  "refresh": "30s",
+  "refresh": "",
   "schemaVersion": 38,
   "style": "dark",
   "tags": [

@@ -7,7 +7,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use metrics::counter;
 use sqlx::PgPool;
-use tracing::{debug, info, instrument};
+use tracing::{debug, info, warn, instrument};
 
 pub struct Store {
     pool: PgPool,
@@ -448,15 +448,26 @@ impl Store {
         .await?;
 
         if view_exists.exists {
+            // Track refresh time for performance monitoring
+            let start = std::time::Instant::now();
+
             // Only refresh if the view exists
             match sqlx::query!("REFRESH MATERIALIZED VIEW CONCURRENTLY hourly_user_stats")
                 .execute(&self.pool)
                 .await
             {
-                Ok(_) => debug!("Refreshed hourly stats materialized view"),
+                Ok(_) => {
+                    let elapsed = start.elapsed();
+                    info!(
+                        duration_ms = elapsed.as_millis(),
+                        "Refreshed hourly_user_stats materialized view"
+                    );
+                    counter!("indexer_materialized_view_refreshes", "view" => "hourly_user_stats").increment(1);
+                }
                 Err(e) => {
                     // Log error but don't fail the operation
-                    debug!("Failed to refresh materialized view: {:?}", e);
+                    warn!("Failed to refresh materialized view: {:?}", e);
+                    counter!("indexer_materialized_view_refresh_errors", "view" => "hourly_user_stats").increment(1);
                 }
             }
         } else {

@@ -35,11 +35,11 @@
           "custom": {
             "axisCenteredZero": false,
             "axisColorMode": "text",
-            "axisLabel": "Volume (USD)",
+            "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
+            "drawStyle": "bars",
+            "fillOpacity": 100,
             "gradientMode": "none",
             "hideFrom": {
               "tooltip": false,
@@ -48,7 +48,7 @@
             },
             "insertNulls": false,
             "lineInterpolation": "linear",
-            "lineWidth": 2,
+            "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
@@ -75,7 +75,23 @@
           },
           "unit": "currencyUSD"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Volume"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 8,
@@ -87,16 +103,15 @@
       "options": {
         "legend": {
           "calcs": [
-            "lastNotNull",
-            "mean"
+            "sum"
           ],
-          "displayMode": "table",
+          "displayMode": "list",
           "placement": "bottom",
           "showLegend": true
         },
         "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
+          "mode": "single",
+          "sort": "none"
         }
       },
       "targets": [
@@ -108,7 +123,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT \n  hour AS time,\n  SUM(volume)::float AS \"Total Volume\"\nFROM hourly_user_stats hus JOIN markets m ON hus.market_id = m.id\nWHERE $__timeFilter(hour)\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\nGROUP BY hour\nORDER BY hour ASC",
+          "rawSql": "\nSELECT \n    date_trunc('hour', f.timestamp) as time,\n    SUM(f.price * f.size) as \"Volume\"\nFROM fills f\nJOIN markets m ON f.market_id = m.id\nWHERE \n    f.exchange_id = 1\n    AND $__timeFilter(f.timestamp)\n    AND (m.market_type = '${market_type}' OR '${market_type}' = 'All')\nGROUP BY 1\nORDER BY 1\n",
           "refId": "A",
           "sql": {
             "columns": [
@@ -445,9 +460,6 @@
       },
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
           "custom": {
             "hideFrom": {
               "tooltip": false,
@@ -468,19 +480,6 @@
       },
       "id": 6,
       "options": {
-        "displayLabels": [
-          "name",
-          "percent"
-        ],
-        "legend": {
-          "displayMode": "table",
-          "placement": "right",
-          "showLegend": true,
-          "values": [
-            "value"
-          ]
-        },
-        "pieType": "donut",
         "reduceOptions": {
           "values": false,
           "calcs": [
@@ -488,10 +487,30 @@
           ],
           "fields": ""
         },
+        "pieType": "pie",
         "tooltip": {
           "mode": "single",
           "sort": "none"
-        }
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "displayLabels": [
+          "percent"
+        ],
+        "legendDisplayMode": "table",
+        "legendPlacement": "right",
+        "legendShowLegend": true,
+        "legendValues": [
+          "value",
+          "percent"
+        ]
       },
       "pluginVersion": "10.0.0",
       "targets": [
@@ -501,10 +520,11 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "format": "table",
+          "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT \n  m.symbol,\n  SUM(volume)::float AS volume\nFROM hourly_user_stats hus JOIN markets m ON hus.market_id = m.id\nWHERE $__timeFilter(hour)\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\nGROUP BY m.symbol\nORDER BY volume DESC\nLIMIT 10",
-          "refId": "A"
+          "rawSql": "\nSELECT \n    NOW() as time,\n    COALESCE(m.symbol, 'Unknown') as metric,\n    SUM(f.price * f.size)::float as value\nFROM fills f\nLEFT JOIN markets m ON f.market_id = m.id\nWHERE \n    f.exchange_id = 1\n    AND $__timeFilter(f.timestamp)\n    AND (m.market_type = '${market_type}' OR '${market_type}' = 'All')\nGROUP BY m.symbol\nORDER BY value DESC\nLIMIT 10\n",
+          "refId": "A",
+          "alias": "$2"
         }
       ],
       "title": "Top Coins by Volume",
@@ -634,11 +654,11 @@
           "custom": {
             "axisCenteredZero": false,
             "axisColorMode": "text",
-            "axisLabel": "Number of Traders",
+            "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
+            "drawStyle": "bars",
+            "fillOpacity": 100,
             "gradientMode": "none",
             "hideFrom": {
               "tooltip": false,
@@ -647,7 +667,7 @@
             },
             "insertNulls": false,
             "lineInterpolation": "linear",
-            "lineWidth": 2,
+            "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
@@ -667,14 +687,30 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "purple",
                 "value": null
               }
             ]
           },
           "unit": "short"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Active Traders"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "purple",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 8,
@@ -686,16 +722,15 @@
       "options": {
         "legend": {
           "calcs": [
-            "mean",
             "max"
           ],
-          "displayMode": "table",
+          "displayMode": "list",
           "placement": "bottom",
           "showLegend": true
         },
         "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
+          "mode": "single",
+          "sort": "none"
         }
       },
       "targets": [
@@ -707,7 +742,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT \n  hour AS time,\n  COUNT(DISTINCT user_address)::float AS \"Active Traders\"\nFROM hourly_user_stats hus JOIN markets m ON hus.market_id = m.id\nWHERE $__timeFilter(hour)\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\nGROUP BY hour\nORDER BY hour ASC",
+          "rawSql": "\nSELECT \n    date_trunc('hour', f.timestamp) as time,\n    COUNT(DISTINCT f.user_address) as \"Active Traders\"\nFROM fills f\nJOIN markets m ON f.market_id = m.id\nWHERE \n    f.exchange_id = 1\n    AND $__timeFilter(f.timestamp)\n    AND (m.market_type = '${market_type}' OR '${market_type}' = 'All')\nGROUP BY 1\nORDER BY 1\n",
           "refId": "A"
         }
       ],
@@ -743,7 +778,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "volume"
+              "options": "Volume"
             },
             "properties": [
               {
@@ -752,14 +787,14 @@
               },
               {
                 "id": "decimals",
-                "value": 0
+                "value": 2
               }
             ]
           },
           {
             "matcher": {
               "id": "byName",
-              "options": "total_pnl"
+              "options": "Total PnL"
             },
             "properties": [
               {
@@ -771,13 +806,8 @@
                 "value": 2
               },
               {
-                "id": "custom.cellOptions",
-                "value": {
-                  "type": "color-text",
-                  "color": {
-                    "mode": "thresholds"
-                  }
-                }
+                "id": "custom.displayMode",
+                "value": "color-text"
               },
               {
                 "id": "thresholds",
@@ -800,7 +830,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "total_fees"
+              "options": "Total Fees"
             },
             "properties": [
               {
@@ -810,18 +840,6 @@
               {
                 "id": "decimals",
                 "value": 2
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "trade_count"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "short"
               }
             ]
           }
@@ -862,7 +880,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  user_address,\n  SUM(trade_count)::bigint AS trade_count,\n  SUM(volume)::float AS volume,\n  SUM(total_pnl)::float AS total_pnl,\n  SUM(total_fees)::float AS total_fees\nFROM hourly_user_stats hus JOIN markets m ON hus.market_id = m.id\nWHERE $__timeFilter(hour)\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n  AND ('$m.symbol' = 'All' OR m.symbol = '$m.symbol')\nGROUP BY user_address\nORDER BY volume DESC\nLIMIT 100",
+          "rawSql": "\nSELECT \n    user_address as \"Trader\",\n    COUNT(*) as \"Trades\",\n    SUM(price * size) as \"Volume\",\n    SUM(COALESCE(closed_pnl, 0)) as \"Total PnL\",\n    SUM(COALESCE(fee, 0)) as \"Total Fees\"\nFROM fills\nWHERE \n    exchange_id = 1\n    AND $__timeFilter(timestamp)\nGROUP BY user_address\nORDER BY 3 DESC\nLIMIT 10\n",
           "refId": "A"
         }
       ],
@@ -954,7 +972,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT \n  hour AS time,\n  SUM(total_fees)::float AS \"Total Fees\"\nFROM hourly_user_stats hus JOIN markets m ON hus.market_id = m.id\nWHERE $__timeFilter(hour)\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\nGROUP BY hour\nORDER BY hour ASC",
+          "rawSql": "\nWITH hourly_fees AS (\n    SELECT \n        date_trunc('hour', f.timestamp) as hour,\n        SUM(COALESCE(f.fee, 0)) as hour_fee\n    FROM fills f\n    JOIN markets m ON f.market_id = m.id\n    WHERE \n        f.exchange_id = 1\n        AND $__timeFilter(f.timestamp)\n        AND (m.market_type = '${market_type}' OR '${market_type}' = 'All')\n    GROUP BY 1\n)\nSELECT \n    hour as time,\n    SUM(hour_fee) OVER (ORDER BY hour) as \"Cumulative Fees\"\nFROM hourly_fees\nORDER BY hour\n",
           "refId": "A"
         }
       ],
@@ -974,11 +992,11 @@
           "custom": {
             "axisCenteredZero": false,
             "axisColorMode": "text",
-            "axisLabel": "Number of Trades",
+            "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "bars",
-            "fillOpacity": 70,
+            "fillOpacity": 100,
             "gradientMode": "none",
             "hideFrom": {
               "tooltip": false,
@@ -996,7 +1014,7 @@
             "spanNulls": false,
             "stacking": {
               "group": "A",
-              "mode": "normal"
+              "mode": "none"
             },
             "thresholdsStyle": {
               "mode": "off"
@@ -1007,15 +1025,30 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "orange",
                 "value": null
               }
             ]
           },
-          "unit": "short",
-          "displayName": "${__series.name}"
+          "unit": "short"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total Trades"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "orange",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 8,
@@ -1027,15 +1060,15 @@
       "options": {
         "legend": {
           "calcs": [
-            "lastNotNull"
+            "sum"
           ],
           "displayMode": "list",
           "placement": "bottom",
           "showLegend": true
         },
         "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
+          "mode": "single",
+          "sort": "none"
         }
       },
       "targets": [
@@ -1047,7 +1080,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT \n  hour AS \"time\",\n  SUM(trade_count)::float AS \"Total Trades\"\nFROM hourly_user_stats hus JOIN markets m ON hus.market_id = m.id\nWHERE \n  hour >= $__timeFrom()::timestamptz \n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n  AND hour <= $__timeTo()::timestamptz\n  AND CASE \n    WHEN '${m.symbol}' = 'All' THEN true\n    ELSE m.symbol = '${m.symbol}'\n  END\nGROUP BY hour\nORDER BY hour",
+          "rawSql": "\nSELECT \n    date_trunc('hour', f.timestamp) as time,\n    COUNT(*) as \"Total Trades\"\nFROM fills f\nJOIN markets m ON f.market_id = m.id\nWHERE \n    f.exchange_id = 1\n    AND $__timeFilter(f.timestamp)\n    AND (m.market_type = '${market_type}' OR '${market_type}' = 'All')\nGROUP BY 1\nORDER BY 1\n",
           "refId": "A",
           "sql": {
             "columns": [
@@ -1065,43 +1098,15 @@
               }
             ],
             "limit": 50
-          }
-        },
-        {
-          "datasource": {
-            "type": "postgres",
-            "uid": "${datasource}"
           },
-          "editorMode": "code",
-          "format": "time_series",
-          "hide": false,
-          "rawQuery": true,
-          "rawSql": "SELECT \n  hour AS \"time\",\n  m.symbol,\n  trade_count::float AS value\nFROM hourly_user_stats hus JOIN markets m ON hus.market_id = m.id\nWHERE \n  hour >= $__timeFrom()::timestamptz \n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n  AND hour <= $__timeTo()::timestamptz\n  AND CASE \n    WHEN '${m.symbol}' = 'All' THEN true\n    ELSE m.symbol = '${m.symbol}'\n  END\nORDER BY hour, m.symbol",
-          "refId": "B",
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          }
+          "alias": "Total Trades"
         }
       ],
       "title": "Trades Per Hour",
       "type": "timeseries"
     }
   ],
-  "refresh": "30s",
+  "refresh": "",
   "schemaVersion": 38,
   "style": "dark",
   "tags": [
@@ -1185,7 +1190,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "Hyperliquid Trading Analytics",
+  "title": "Trading Overview",
   "uid": "hyperliquid-overview",
   "version": 1,
   "weekStart": ""

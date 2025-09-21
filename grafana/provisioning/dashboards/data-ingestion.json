@@ -76,7 +76,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  last_record_ts AS \"Last Checkpoint\"\nFROM ingest_checkpoints\nWHERE source = 's3'\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')",
+          "rawSql": "\nSELECT \n    last_record_ts as \"Last Record\",\n    records_processed as \"Records Processed\",\n    updated_at as \"Last Update\"\nFROM ingest_checkpoints\nWHERE exchange_id = ${exchange:singlequote} AND source = 's3'\nORDER BY updated_at DESC\nLIMIT 1\n",
           "refId": "A"
         }
       ],
@@ -199,7 +199,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  MIN(timestamp) AS \"Earliest Data\"\nFROM fills f JOIN markets m ON f.market_id = m.id",
+          "rawSql": "\nSELECT \n    MIN(timestamp) as \"Earliest Fill\"\nFROM fills\nWHERE exchange_id = ${exchange:singlequote}\n",
           "refId": "A"
         }
       ],
@@ -260,7 +260,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  MAX(timestamp) AS \"Latest Data\"\nFROM fills f JOIN markets m ON f.market_id = m.id",
+          "rawSql": "\nSELECT \n    MAX(timestamp) as \"Latest Fill\"\nFROM fills\nWHERE exchange_id = ${exchange:singlequote}\n",
           "refId": "A"
         }
       ],
@@ -458,9 +458,9 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "format": "table",
+          "format": "time_series",
           "rawQuery": true,
-          "rawSql": "WITH hourly_data AS (\n  SELECT \n    DATE_TRUNC('hour', timestamp) AS hour,\n    COUNT(*) AS fills_count\n  FROM fills f JOIN markets m ON f.market_id = m.id\n  GROUP BY hour\n),\nhour_series AS (\n  SELECT generate_series(\n    (SELECT MIN(hour) FROM hourly_data),\n    (SELECT MAX(hour) FROM hourly_data),\n    '1 hour'::interval\n  ) AS hour\n),\nmissing_hours AS (\n  SELECT \n    hs.hour,\n    COALESCE(hd.fills_count, 0) AS fills_count\n  FROM hour_series hs\n  LEFT JOIN hourly_data hd ON hs.hour = hd.hour\n  WHERE hd.fills_count IS NULL OR hd.fills_count < 100\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n)\nSELECT \n  hour AS gap_start,\n  LEAD(hour) OVER (ORDER BY hour) AS gap_end,\n  EXTRACT(EPOCH FROM (LEAD(hour) OVER (ORDER BY hour) - hour)) / 3600 AS gap_hours,\n  fills_count\nFROM missing_hours\nWHERE hour >= NOW() - INTERVAL '30 days'\nORDER BY hour DESC\nLIMIT 100",
+          "rawSql": "\nWITH hourly_counts AS (\n    SELECT \n        DATE_TRUNC('hour', timestamp) as hour,\n        COUNT(*) as fill_count\n    FROM fills\n    WHERE exchange_id = ${exchange:singlequote}\n        AND $__timeFilter(timestamp)\n    GROUP BY 1\n)\nSELECT \n    hour as time,\n    fill_count as \"Fill Count\"\nFROM hourly_counts\nWHERE fill_count < 100\nORDER BY hour DESC\n",
           "refId": "A"
         }
       ],
@@ -545,9 +545,6 @@
       },
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
           "custom": {
             "hideFrom": {
               "tooltip": false,
@@ -568,6 +565,18 @@
       },
       "id": 8,
       "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "pieType": "pie",
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
         "legend": {
           "displayMode": "table",
           "placement": "right",
@@ -577,11 +586,16 @@
             "percent"
           ]
         },
-        "pieType": "donut",
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
+        "displayLabels": [
+          "percent"
+        ],
+        "legendDisplayMode": "table",
+        "legendPlacement": "right",
+        "legendShowLegend": true,
+        "legendValues": [
+          "value",
+          "percent"
+        ]
       },
       "targets": [
         {
@@ -590,10 +604,11 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "format": "table",
+          "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT \n  m.symbol,\n  COUNT(*) AS fills_count\nFROM fills f JOIN markets m ON f.market_id = m.id\nWHERE $__timeFilter(timestamp)\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\nGROUP BY m.symbol\nORDER BY fills_count DESC\nLIMIT 20",
-          "refId": "A"
+          "rawSql": "\nSELECT \n    NOW() as time,\n    COALESCE(m.symbol, 'Unknown') as metric,\n    COUNT(*)::float as value\nFROM fills f\nLEFT JOIN markets m ON f.market_id = m.id\nWHERE \n    f.exchange_id = 1\n    AND $__timeFilter(f.timestamp)\n    AND (m.market_type = '${market_type}' OR '${market_type}' = 'All')\nGROUP BY m.symbol\nORDER BY value DESC\nLIMIT 10\n",
+          "refId": "A",
+          "alias": "$2"
         }
       ],
       "title": "Fills Distribution by Coin",
@@ -693,7 +708,7 @@
       "type": "timeseries"
     }
   ],
-  "refresh": "30s",
+  "refresh": "",
   "schemaVersion": 38,
   "style": "dark",
   "tags": [

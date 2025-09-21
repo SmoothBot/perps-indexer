@@ -1,0 +1,4 @@
+
+chart edits:
+- change "Trades Per Hour" to only show total trades (keep the bar chart)
+- Top Coins by Volume isnt working, it only shows one series

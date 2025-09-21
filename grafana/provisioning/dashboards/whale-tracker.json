@@ -1,0 +1,1340 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": true,
+      "title": "Inspect Address",
+      "tooltip": "Open Address Inspector for selected trader",
+      "type": "link",
+      "url": "/d/address-inspector/address-inspector?var-address=${selected_address}"
+    }
+  ],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "${datasource}"
+      },
+      "description": "Identify traders with the largest net buying or selling activity for a specific token",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "user_address"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Trader Address"
+              },
+              {
+                "id": "custom.width",
+                "value": 400
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Inspect",
+                    "url": "/d/address-inspector/address-inspector?var-address=${__data.fields[\"user_address\"]}"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "net_volume"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Net Volume (USD)"
+              },
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "rgba(255, 0, 0, 0.1)",
+                      "value": -1000000
+                    },
+                    {
+                      "color": "rgba(255, 255, 255, 0)",
+                      "value": -100
+                    },
+                    {
+                      "color": "rgba(0, 255, 0, 0.1)",
+                      "value": 100
+                    },
+                    {
+                      "color": "green",
+                      "value": 1000000
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "total_buy_volume"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Total Buy Volume"
+              },
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "total_sell_volume"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Total Sell Volume"
+              },
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "trade_count"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "# Trades"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "avg_trade_size"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Avg Trade Size"
+              },
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "total_pnl"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Total PnL"
+              },
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": -100
+                    },
+                    {
+                      "color": "green",
+                      "value": 0
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "enablePagination": true,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "net_volume"
+          }
+        ]
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH trader_activity AS (\n  SELECT \n    f.user_address,\n    SUM(CASE WHEN f.side = 'BUY' THEN f.price * f.size ELSE 0 END) as total_buy_volume,\n    SUM(CASE WHEN f.side = 'SELL' THEN f.price * f.size ELSE 0 END) as total_sell_volume,\n    SUM(CASE WHEN f.side = 'BUY' THEN f.price * f.size ELSE -f.price * f.size END) as net_volume,\n    COUNT(*) as trade_count,\n    SUM(f.price * f.size) / COUNT(*) as avg_trade_size,\n    SUM(COALESCE(f.closed_pnl, 0)) as total_pnl\n  FROM fills f\n  JOIN markets m ON f.market_id = m.id\n  WHERE \n    m.symbol = '${coin}'\n    AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n    AND $__timeFilter(f.timestamp)\n  GROUP BY f.user_address\n  HAVING ABS(SUM(CASE WHEN f.side = 'BUY' THEN f.price * f.size ELSE -f.price * f.size END)) > ${min_volume}\n)\nSELECT \n  user_address,\n  net_volume,\n  total_buy_volume,\n  total_sell_volume,\n  trade_count,\n  avg_trade_size,\n  total_pnl\nFROM trader_activity\nORDER BY ABS(net_volume) DESC\nLIMIT 100",
+          "refId": "A"
+        }
+      ],
+      "title": "Top Net Buyers/Sellers for ${coin}",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "${datasource}"
+      },
+      "description": "Shows the cumulative net buying/selling over time for top traders",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": true,
+            "axisColorMode": "text",
+            "axisLabel": "Net Volume (USD)",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "currencyUSD"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 12
+      },
+      "id": 2,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "width": 200
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "WITH top_traders AS (\n  SELECT \n    f.user_address,\n    ABS(SUM(CASE WHEN f.side = 'BUY' THEN f.price * f.size ELSE -f.price * f.size END)) as abs_net_volume\n  FROM fills f\n  JOIN markets m ON f.market_id = m.id\n  WHERE \n    m.symbol = '${coin}'\n    AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n    AND $__timeFilter(f.timestamp)\n  GROUP BY f.user_address\n  ORDER BY abs_net_volume DESC\n  LIMIT 10\n)\nSELECT \n  f.timestamp as time,\n  CONCAT(LEFT(f.user_address, 6), '...', RIGHT(f.user_address, 4)) as metric,\n  SUM(SUM(CASE WHEN f.side = 'BUY' THEN f.price * f.size ELSE -f.price * f.size END)) OVER (PARTITION BY f.user_address ORDER BY f.timestamp) as value\nFROM fills f\nJOIN markets m ON f.market_id = m.id\nJOIN top_traders t ON f.user_address = t.user_address\nWHERE \n  m.symbol = '${coin}'\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n  AND $__timeFilter(f.timestamp)\nGROUP BY f.timestamp, f.user_address\nORDER BY f.timestamp",
+          "refId": "A"
+        }
+      ],
+      "title": "Cumulative Net Position Over Time - Top 10 Traders",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "${datasource}"
+      },
+      "description": "Hourly net buying/selling activity",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "continuous-RdYlGr"
+          },
+          "custom": {
+            "axisCenteredZero": true,
+            "axisColorMode": "text",
+            "axisLabel": "Net Volume (USD)",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "gradientMode": "scheme",
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          },
+          "unit": "currencyUSD"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 12
+      },
+      "id": 3,
+      "options": {
+        "legend": {
+          "calcs": [
+            "sum"
+          ],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT \n  DATE_TRUNC('hour', f.timestamp) as time,\n  SUM(CASE WHEN f.side = 'BUY' THEN f.price * f.size ELSE -f.price * f.size END) as \"Net Volume\"\nFROM fills f\nJOIN markets m ON f.market_id = m.id\nWHERE \n  m.symbol = '${coin}'\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n  AND $__timeFilter(f.timestamp)\nGROUP BY 1\nORDER BY 1",
+          "refId": "A"
+        }
+      ],
+      "title": "Hourly Net Buying/Selling Pressure",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "${datasource}"
+      },
+      "description": "Breakdown of trader categories by volume",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            }
+          },
+          "mappings": [],
+          "unit": "currencyUSD"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 22
+      },
+      "id": 4,
+      "options": {
+        "displayLabels": [
+          "name",
+          "percent"
+        ],
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "pieType": "donut",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "WITH trader_volumes AS (\n  SELECT \n    f.user_address,\n    SUM(f.price * f.size) as total_volume\n  FROM fills f\n  JOIN markets m ON f.market_id = m.id\n  WHERE \n    m.symbol = '${coin}'\n    AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n    AND $__timeFilter(f.timestamp)\n  GROUP BY f.user_address\n)\nSELECT \n  NOW() as time,\n  CASE \n    WHEN total_volume > 10000000 THEN 'Whales (>$10M)' \n    WHEN total_volume > 1000000 THEN 'Large Traders ($1M-$10M)'\n    WHEN total_volume > 100000 THEN 'Medium Traders ($100K-$1M)'\n    ELSE 'Small Traders (<$100K)'\n  END as metric,\n  SUM(total_volume)::float as value\nFROM trader_volumes\nGROUP BY metric\nORDER BY value DESC",
+          "refId": "A",
+          "alias": "$2"
+        }
+      ],
+      "title": "Trader Size Distribution",
+      "type": "piechart"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "${datasource}"
+      },
+      "description": "Recent large trades that might indicate whale activity",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "timestamp"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Time"
+              },
+              {
+                "id": "custom.width",
+                "value": 180
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "user_address"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Trader"
+              },
+              {
+                "id": "custom.width",
+                "value": 150
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Inspect",
+                    "url": "/d/address-inspector/address-inspector?var-address=${__data.fields[\"user_address\"]}"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "side"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Side"
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "BUY": {
+                        "color": "green",
+                        "index": 0
+                      },
+                      "SELL": {
+                        "color": "red",
+                        "index": 1
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "price"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Price"
+              },
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "decimals",
+                "value": 6
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "size"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Size"
+              },
+              {
+                "id": "decimals",
+                "value": 4
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "volume"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Volume"
+              },
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gradient-gauge"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "closed_pnl"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "PnL"
+              },
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": -100
+                    },
+                    {
+                      "color": "green",
+                      "value": 0
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 22
+      },
+      "id": 5,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "timestamp"
+          }
+        ]
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT \n  f.timestamp,\n  CONCAT(LEFT(f.user_address, 6), '...', RIGHT(f.user_address, 4)) as user_address,\n  f.side,\n  f.price,\n  f.size,\n  f.price * f.size as volume,\n  COALESCE(f.closed_pnl, 0) as closed_pnl\nFROM fills f\nJOIN markets m ON f.market_id = m.id\nWHERE \n  m.symbol = '${coin}'\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n  AND f.price * f.size > ${large_trade_threshold}\n  AND $__timeFilter(f.timestamp)\nORDER BY f.timestamp DESC\nLIMIT 100",
+          "refId": "A"
+        }
+      ],
+      "title": "Recent Large Trades (>${large_trade_threshold})",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "${datasource}"
+      },
+      "description": "Shows the most aggressive buyers and sellers in the selected period",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "continuous-RdYlGr"
+          },
+          "custom": {
+            "axisCenteredZero": true,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "axisSoftMax": 0,
+            "axisSoftMin": 0,
+            "fillOpacity": 80,
+            "gradientMode": "scheme",
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          },
+          "unit": "currencyUSD"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 32
+      },
+      "id": 6,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.9,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "orientation": "horizontal",
+        "showValue": "always",
+        "stacking": "none",
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "xTickLabelRotation": 0,
+        "xTickLabelSpacing": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH trader_net AS (\n  SELECT \n    f.user_address,\n    SUM(CASE WHEN f.side = 'BUY' THEN f.price * f.size ELSE -f.price * f.size END) as net_volume\n  FROM fills f\n  JOIN markets m ON f.market_id = m.id\n  WHERE \n    m.symbol = '${coin}'\n    AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n    AND $__timeFilter(f.timestamp)\n  GROUP BY f.user_address\n  HAVING ABS(SUM(CASE WHEN f.side = 'BUY' THEN f.price * f.size ELSE -f.price * f.size END)) > ${min_volume}\n)\nSELECT \n  CONCAT(LEFT(user_address, 6), '...', RIGHT(user_address, 4)) as trader,\n  net_volume\nFROM (\n  SELECT * FROM trader_net\n  ORDER BY net_volume DESC\n  LIMIT 10\n) buyers\nUNION ALL\nSELECT \n  CONCAT(LEFT(user_address, 6), '...', RIGHT(user_address, 4)) as trader,\n  net_volume\nFROM (\n  SELECT * FROM trader_net\n  ORDER BY net_volume ASC\n  LIMIT 10\n) sellers\nORDER BY net_volume DESC",
+          "refId": "A"
+        }
+      ],
+      "title": "Top 10 Net Buyers vs Top 10 Net Sellers",
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "${datasource}"
+      },
+      "description": "Shows the top markets by trading volume across all traders",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "symbol"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Market"
+              },
+              {
+                "id": "custom.width",
+                "value": 120
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "market_type"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Type"
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "spot": {
+                        "color": "blue",
+                        "index": 0
+                      },
+                      "perp": {
+                        "color": "orange",
+                        "index": 1
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "total_volume"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Total Volume"
+              },
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gradient-gauge"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "buy_volume"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Buy Volume"
+              },
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "sell_volume"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sell Volume"
+              },
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "red",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "net_volume"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Net Volume"
+              },
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "rgba(255, 0, 0, 0.1)",
+                      "value": -1000000
+                    },
+                    {
+                      "color": "rgba(255, 255, 255, 0)",
+                      "value": -100
+                    },
+                    {
+                      "color": "rgba(0, 255, 0, 0.1)",
+                      "value": 100
+                    },
+                    {
+                      "color": "green",
+                      "value": 1000000
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "trade_count"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "# Trades"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "unique_traders"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "# Traders"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "avg_trade_size"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Avg Trade Size"
+              },
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 42
+      },
+      "id": 7,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "total_volume"
+          }
+        ]
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT \n  m.symbol,\n  m.market_type,\n  SUM(f.price * f.size) as total_volume,\n  SUM(CASE WHEN f.side = 'BUY' THEN f.price * f.size ELSE 0 END) as buy_volume,\n  SUM(CASE WHEN f.side = 'SELL' THEN f.price * f.size ELSE 0 END) as sell_volume,\n  SUM(CASE WHEN f.side = 'BUY' THEN f.price * f.size ELSE -f.price * f.size END) as net_volume,\n  COUNT(*) as trade_count,\n  COUNT(DISTINCT f.user_address) as unique_traders,\n  SUM(f.price * f.size) / COUNT(*) as avg_trade_size\nFROM fills f\nJOIN markets m ON f.market_id = m.id\nWHERE \n  ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n  AND $__timeFilter(f.timestamp)\nGROUP BY m.symbol, m.market_type\nHAVING SUM(f.price * f.size) > 0\nORDER BY total_volume DESC\nLIMIT 50",
+          "refId": "A"
+        }
+      ],
+      "title": "Top Markets by Volume",
+      "type": "table"
+    }
+  ],
+  "refresh": "",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": [
+    "whale",
+    "trading",
+    "analysis"
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "PostgreSQL-Hyperliquid",
+          "value": "PostgreSQL-Hyperliquid"
+        },
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "postgres",
+        "queryValue": "",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "BTC",
+          "value": "BTC"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "${datasource}"
+        },
+        "definition": "SELECT DISTINCT symbol FROM markets WHERE symbol IS NOT NULL ORDER BY symbol",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Token",
+        "multi": false,
+        "name": "coin",
+        "options": [],
+        "query": "SELECT DISTINCT symbol FROM markets WHERE symbol IS NOT NULL ORDER BY symbol",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "allValue": "All",
+        "current": {
+          "selected": false,
+          "text": "All",
+          "value": "All"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "${datasource}"
+        },
+        "definition": "SELECT 'All' AS market_type UNION SELECT 'spot' UNION SELECT 'perp' ORDER BY 1",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Market Type",
+        "multi": false,
+        "name": "market_type",
+        "options": [],
+        "query": "SELECT 'All' AS market_type UNION SELECT 'spot' UNION SELECT 'perp' ORDER BY 1",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "100000",
+          "value": "100000"
+        },
+        "description": "Minimum net volume to be considered a whale",
+        "hide": 0,
+        "label": "Min Volume (USD)",
+        "name": "min_volume",
+        "options": [
+          {
+            "selected": true,
+            "text": "100000",
+            "value": "100000"
+          }
+        ],
+        "query": "100000",
+        "skipUrlSync": false,
+        "type": "textbox"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "50000",
+          "value": "50000"
+        },
+        "description": "Threshold for large trade detection",
+        "hide": 0,
+        "label": "Large Trade Size (USD)",
+        "name": "large_trade_threshold",
+        "options": [
+          {
+            "selected": true,
+            "text": "50000",
+            "value": "50000"
+          }
+        ],
+        "query": "50000",
+        "skipUrlSync": false,
+        "type": "textbox"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "",
+          "value": ""
+        },
+        "description": "Selected trader address for drill-down",
+        "hide": 2,
+        "label": "Selected Address",
+        "name": "selected_address",
+        "options": [
+          {
+            "selected": true,
+            "text": "",
+            "value": ""
+          }
+        ],
+        "query": "",
+        "skipUrlSync": false,
+        "type": "textbox"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Whale Tracker",
+  "uid": "whale-tracker",
+  "version": 1,
+  "weekStart": ""
+}
