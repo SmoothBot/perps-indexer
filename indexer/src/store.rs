@@ -1,19 +1,37 @@
+use crate::market::MarketRegistry;
 use crate::model::{Checkpoint, Fill};
 use chrono::{DateTime, Utc};
 use indexer_core::Result;
 use bigdecimal::BigDecimal;
 use std::str::FromStr;
+use std::sync::Arc;
 use metrics::counter;
 use sqlx::PgPool;
 use tracing::{debug, info, instrument};
 
 pub struct Store {
     pool: PgPool,
+    exchange_id: i32,
+    market_registry: Arc<MarketRegistry>,
 }
 
 impl Store {
-    pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+    pub async fn new(pool: PgPool) -> Result<Self> {
+        // Get Hyperliquid exchange ID
+        let exchange_id: i32 = sqlx::query_scalar(
+            "SELECT id FROM exchanges WHERE code = 'HL'"
+        )
+        .fetch_one(&pool)
+        .await?;
+
+        // Create market registry
+        let market_registry = Arc::new(MarketRegistry::new(pool.clone(), exchange_id).await?);
+
+        Ok(Self {
+            pool,
+            exchange_id,
+            market_registry,
+        })
     }
 
     #[instrument(skip(self, fills))]
@@ -61,7 +79,6 @@ impl Store {
     }
 
     async fn bulk_insert_with_copy(&self, fills: &[Fill]) -> Result<usize> {
-        use sqlx::postgres::{PgConnection, PgCopyIn};
         use sqlx::Connection;
 
         let mut conn = self.pool.acquire().await?;
@@ -71,8 +88,9 @@ impl Store {
         sqlx::query(
             r#"
             CREATE TEMP TABLE temp_fills (
+                exchange_id INTEGER NOT NULL,
+                market_id INTEGER NOT NULL,
                 user_address VARCHAR(66) NOT NULL,
-                coin VARCHAR(20) NOT NULL,
                 side VARCHAR(4) NOT NULL,
                 price NUMERIC(20, 10) NOT NULL,
                 size NUMERIC(20, 10) NOT NULL,
@@ -88,19 +106,23 @@ impl Store {
         .await?;
 
         // Use COPY to bulk insert data
-        let copy_query = r#"COPY temp_fills (user_address, coin, side, price, size, fee, closed_pnl, timestamp, block_number, source_id) FROM STDIN WITH (FORMAT csv, NULL '\N')"#;
+        let copy_query = r#"COPY temp_fills (exchange_id, market_id, user_address, side, price, size, fee, closed_pnl, timestamp, block_number, source_id) FROM STDIN WITH (FORMAT csv, NULL '\N')"#;
 
         let mut copy_in = tx.copy_in_raw(copy_query).await?;
 
         // Build CSV data
         let mut csv_data = String::new();
         for fill in fills {
+            // Get or create market
+            let market_id = self.market_registry.get_or_create_market(&fill.coin).await?;
+
             use std::fmt::Write;
             write!(
                 csv_data,
-                "{},{},{},{},{},{},{},{},{},{}\n",
+                "{},{},{},{},{},{},{},{},{},{},{}\n",
+                self.exchange_id,
+                market_id,
                 fill.user_address,
-                fill.coin,
                 fill.side,
                 fill.price,
                 fill.size,
@@ -116,11 +138,13 @@ impl Store {
         copy_in.finish().await?;
 
         // Insert from temp table with conflict handling
+        // Note: We need to specify columns explicitly since fills has an auto-generated id
         let result = sqlx::query(
             r#"
-            INSERT INTO hl_fills
-            SELECT * FROM temp_fills
-            ON CONFLICT (user_address, coin, timestamp, price, size)
+            INSERT INTO fills (exchange_id, market_id, user_address, side, price, size, fee, closed_pnl, timestamp, block_number, source_id)
+            SELECT exchange_id, market_id, user_address, side, price, size, fee, closed_pnl, timestamp, block_number, source_id
+            FROM temp_fills
+            ON CONFLICT (exchange_id, user_address, market_id, timestamp, price, size)
             DO NOTHING
             "#
         )
@@ -134,32 +158,39 @@ impl Store {
 
     async fn bulk_insert_with_values_optimized(&self, fills: &[Fill]) -> Result<usize> {
         // Optimized multi-row VALUES with safe batch size
-        // PostgreSQL has a limit of 65535 parameters, and we use 10 params per row
-        const BATCH_SIZE: usize = 5000; // Safe batch size: 5000 * 10 = 50,000 params
+        // PostgreSQL has a limit of 65535 parameters, and we use 11 params per row
+        const BATCH_SIZE: usize = 5000; // Safe batch size: 5000 * 11 = 55,000 params
         let mut total_inserted = 0;
 
         for batch in fills.chunks(BATCH_SIZE) {
             let mut tx = self.pool.begin().await?;
 
             // Build multi-row insert query
+            // Get market IDs for all coins in batch first
+            let mut market_ids = Vec::with_capacity(batch.len());
+            for fill in batch {
+                let market_id = self.market_registry.get_or_create_market(&fill.coin).await?;
+                market_ids.push(market_id);
+            }
+
             let mut values_strings = Vec::with_capacity(batch.len());
             let mut param_index = 1;
 
             for _ in batch {
-                let placeholders: Vec<String> = (0..10)
+                let placeholders: Vec<String> = (0..11)
                     .map(|i| format!("${}", param_index + i))
                     .collect();
                 values_strings.push(format!("({})", placeholders.join(", ")));
-                param_index += 10;
+                param_index += 11;
             }
 
             let query_string = format!(
                 r#"
-                INSERT INTO hl_fills (
-                    user_address, coin, side, price, size,
+                INSERT INTO fills (
+                    exchange_id, market_id, user_address, side, price, size,
                     fee, closed_pnl, timestamp, block_number, source_id
                 ) VALUES {}
-                ON CONFLICT (user_address, coin, timestamp, price, size)
+                ON CONFLICT (exchange_id, user_address, market_id, timestamp, price, size)
                 DO NOTHING
                 "#,
                 values_strings.join(", ")
@@ -168,10 +199,11 @@ impl Store {
             let mut query = sqlx::query(&query_string);
 
             // Bind all parameters
-            for fill in batch {
+            for (fill, market_id) in batch.iter().zip(market_ids.iter()) {
                 query = query
+                    .bind(self.exchange_id)
+                    .bind(market_id)
                     .bind(&fill.user_address)
-                    .bind(&fill.coin)
                     .bind(fill.side.to_string())
                     .bind(BigDecimal::from_str(&fill.price.to_string()).ok())
                     .bind(BigDecimal::from_str(&fill.size.to_string()).ok())
@@ -198,10 +230,11 @@ impl Store {
             Checkpoint,
             r#"
             SELECT source, cursor, last_record_ts, last_block_number,
-                   records_processed, updated_at, metadata
+                   records_processed, updated_at as "updated_at!", metadata
             FROM ingest_checkpoints
-            WHERE source = $1
+            WHERE exchange_id = $1 AND source = $2
             "#,
+            self.exchange_id,
             source
         )
         .fetch_optional(&self.pool)
@@ -215,10 +248,10 @@ impl Store {
         sqlx::query!(
             r#"
             INSERT INTO ingest_checkpoints (
-                source, cursor, last_record_ts, last_block_number,
+                exchange_id, source, cursor, last_record_ts, last_block_number,
                 records_processed, updated_at, metadata
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-            ON CONFLICT (source) DO UPDATE SET
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            ON CONFLICT (exchange_id, source) DO UPDATE SET
                 cursor = EXCLUDED.cursor,
                 last_record_ts = EXCLUDED.last_record_ts,
                 last_block_number = EXCLUDED.last_block_number,
@@ -226,6 +259,7 @@ impl Store {
                 updated_at = EXCLUDED.updated_at,
                 metadata = EXCLUDED.metadata
             "#,
+            self.exchange_id,
             checkpoint.source,
             checkpoint.cursor,
             checkpoint.last_record_ts,
@@ -253,8 +287,10 @@ impl Store {
         let result = sqlx::query!(
             r#"
             SELECT MAX(timestamp) as "max_timestamp"
-            FROM hl_fills
-            "#
+            FROM fills
+            WHERE exchange_id = $1
+            "#,
+            self.exchange_id
         )
         .fetch_one(&self.pool)
         .await?;
@@ -268,9 +304,10 @@ impl Store {
         let result = sqlx::query!(
             r#"
             SELECT COUNT(*) as "count!"
-            FROM hl_fills
-            WHERE timestamp >= $1 AND timestamp < $2
+            FROM fills
+            WHERE exchange_id = $1 AND timestamp >= $2 AND timestamp < $3
             "#,
+            self.exchange_id,
             start,
             end
         )
@@ -305,8 +342,8 @@ impl Store {
                 SELECT
                     DATE_TRUNC('hour', timestamp) AS hour,
                     COUNT(*) AS count
-                FROM hl_fills
-                WHERE timestamp >= $1 AND timestamp < $2
+                FROM fills
+                WHERE exchange_id = $3 AND timestamp >= $1 AND timestamp < $2
                 GROUP BY DATE_TRUNC('hour', timestamp)
             )
             SELECT
@@ -317,7 +354,8 @@ impl Store {
             ORDER BY hs.hour
             "#,
             start,
-            end
+            end,
+            self.exchange_id
         )
         .fetch_all(&self.pool)
         .await?;
@@ -343,13 +381,15 @@ impl Store {
     pub async fn update_daily_stats(&self, date: chrono::NaiveDate) -> Result<()> {
         sqlx::query!(
             r#"
-            INSERT INTO hl_daily_stats (
-                date, coin, total_volume_usd, buy_volume_usd, sell_volume_usd,
+            INSERT INTO daily_stats (
+                exchange_id,
+                market_id, date, total_volume_usd, buy_volume_usd, sell_volume_usd,
                 total_trades, unique_traders, open_price, high_price, low_price, close_price
             )
             SELECT
+                $2 as exchange_id,
+                market_id,
                 DATE(timestamp) as date,
-                coin,
                 SUM(price * size) as total_volume_usd,
                 SUM(CASE WHEN side = 'BUY' THEN price * size ELSE 0 END) as buy_volume_usd,
                 SUM(CASE WHEN side = 'SELL' THEN price * size ELSE 0 END) as sell_volume_usd,
@@ -359,10 +399,10 @@ impl Store {
                 MAX(price) as high_price,
                 MIN(price) as low_price,
                 (array_agg(price ORDER BY timestamp DESC))[1] as close_price
-            FROM hl_fills
-            WHERE DATE(timestamp) = $1
-            GROUP BY DATE(timestamp), coin
-            ON CONFLICT (date, coin) DO UPDATE SET
+            FROM fills
+            WHERE exchange_id = $2 AND DATE(timestamp) = $1
+            GROUP BY market_id, DATE(timestamp)
+            ON CONFLICT (exchange_id, market_id, date) DO UPDATE SET
                 total_volume_usd = EXCLUDED.total_volume_usd,
                 buy_volume_usd = EXCLUDED.buy_volume_usd,
                 sell_volume_usd = EXCLUDED.sell_volume_usd,
@@ -374,7 +414,8 @@ impl Store {
                 close_price = EXCLUDED.close_price,
                 updated_at = NOW()
             "#,
-            date
+            date,
+            self.exchange_id
         )
         .execute(&self.pool)
         .await?;
@@ -399,7 +440,7 @@ impl Store {
                 SELECT 1
                 FROM pg_matviews
                 WHERE schemaname = 'public'
-                AND matviewname = 'hl_hourly_user_stats'
+                AND matviewname = 'hourly_user_stats'
             ) as "exists!"
             "#
         )
@@ -408,7 +449,7 @@ impl Store {
 
         if view_exists.exists {
             // Only refresh if the view exists
-            match sqlx::query!("REFRESH MATERIALIZED VIEW CONCURRENTLY hl_hourly_user_stats")
+            match sqlx::query!("REFRESH MATERIALIZED VIEW CONCURRENTLY hourly_user_stats")
                 .execute(&self.pool)
                 .await
             {
@@ -419,7 +460,7 @@ impl Store {
                 }
             }
         } else {
-            debug!("Materialized view hl_hourly_user_stats does not exist yet");
+            debug!("Materialized view hourly_user_stats does not exist yet");
         }
 
         Ok(())

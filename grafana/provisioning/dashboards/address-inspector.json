@@ -67,7 +67,9 @@
         "justifyMode": "center",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -83,7 +85,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  SUM(closed_pnl) AS \"Total PnL\"\nFROM hl_fills\nWHERE user_address = '${address}'\n  AND $__timeFilter(timestamp)",
+          "rawSql": "SELECT \n  SUM(closed_pnl) AS \"Total PnL\"\nFROM fills f JOIN markets m ON f.market_id = m.id\nWHERE user_address = '${address}'\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n  AND $__timeFilter(timestamp)",
           "refId": "A"
         }
       ],
@@ -127,7 +129,9 @@
         "justifyMode": "center",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -143,7 +147,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  SUM(price * size) AS \"Total Volume\"\nFROM hl_fills\nWHERE user_address = '${address}'\n  AND $__timeFilter(timestamp)",
+          "rawSql": "SELECT \n  SUM(price * size) AS \"Total Volume\"\nFROM fills f JOIN markets m ON f.market_id = m.id\nWHERE user_address = '${address}'\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n  AND $__timeFilter(timestamp)",
           "refId": "A"
         }
       ],
@@ -187,7 +191,9 @@
         "justifyMode": "center",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -203,7 +209,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  COUNT(*) AS \"Total Trades\"\nFROM hl_fills\nWHERE user_address = '${address}'\n  AND $__timeFilter(timestamp)",
+          "rawSql": "SELECT \n  COUNT(*) AS \"Total Trades\"\nFROM fills f JOIN markets m ON f.market_id = m.id\nWHERE user_address = '${address}'\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n  AND $__timeFilter(timestamp)",
           "refId": "A"
         }
       ],
@@ -247,7 +253,9 @@
         "justifyMode": "center",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -263,7 +271,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  SUM(fee) AS \"Total Fees\"\nFROM hl_fills\nWHERE user_address = '${address}'\n  AND $__timeFilter(timestamp)",
+          "rawSql": "SELECT \n  SUM(fee) AS \"Total Fees\"\nFROM fills f JOIN markets m ON f.market_id = m.id\nWHERE user_address = '${address}'\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n  AND $__timeFilter(timestamp)",
           "refId": "A"
         }
       ],
@@ -334,7 +342,9 @@
       "id": 5,
       "options": {
         "legend": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "displayMode": "list",
           "placement": "bottom",
           "showLegend": true
@@ -353,7 +363,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT \n  timestamp AS time,\n  SUM(closed_pnl) OVER (ORDER BY timestamp) AS cumulative_pnl\nFROM hl_fills\nWHERE user_address = '${address}'\n  AND $__timeFilter(timestamp)\nORDER BY timestamp",
+          "rawSql": "SELECT \n  timestamp AS time,\n  SUM(closed_pnl) OVER (ORDER BY timestamp) AS cumulative_pnl\nFROM fills f JOIN markets m ON f.market_id = m.id\nWHERE user_address = '${address}'\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n  AND $__timeFilter(timestamp)\nORDER BY timestamp",
           "refId": "A"
         }
       ],
@@ -443,7 +453,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT \n  DATE_TRUNC('hour', timestamp) AS time,\n  SUM(CASE WHEN side = 'Buy' THEN price * size ELSE 0 END) AS buy_volume,\n  SUM(CASE WHEN side = 'Sell' THEN price * size ELSE 0 END) AS sell_volume\nFROM hl_fills\nWHERE user_address = '${address}'\n  AND $__timeFilter(timestamp)\nGROUP BY time\nORDER BY time",
+          "rawSql": "SELECT \n  DATE_TRUNC('hour', timestamp) AS time,\n  SUM(CASE WHEN side = 'Buy' THEN price * size ELSE 0 END) AS buy_volume,\n  SUM(CASE WHEN side = 'Sell' THEN price * size ELSE 0 END) AS sell_volume\nFROM fills f JOIN markets m ON f.market_id = m.id\nWHERE user_address = '${address}'\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n  AND $__timeFilter(timestamp)\nGROUP BY time\nORDER BY time",
           "refId": "A"
         }
       ],
@@ -566,7 +576,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  coin,\n  COUNT(*) AS trades,\n  SUM(price * size) AS volume,\n  SUM(closed_pnl) AS pnl,\n  SUM(fee) AS fees,\n  AVG(price) AS avg_price\nFROM hl_fills\nWHERE user_address = '${address}'\n  AND $__timeFilter(timestamp)\nGROUP BY coin\nORDER BY volume DESC",
+          "rawSql": "SELECT \n  m.symbol,\n  COUNT(*) AS trades,\n  SUM(price * size) AS volume,\n  SUM(closed_pnl) AS pnl,\n  SUM(fee) AS fees,\n  AVG(price) AS avg_price\nFROM fills f JOIN markets m ON f.market_id = m.id\nWHERE user_address = '${address}'\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n  AND $__timeFilter(timestamp)\nGROUP BY m.symbol\nORDER BY volume DESC",
           "refId": "A"
         }
       ],
@@ -607,7 +617,10 @@
           "displayMode": "table",
           "placement": "right",
           "showLegend": true,
-          "values": ["value", "percent"]
+          "values": [
+            "value",
+            "percent"
+          ]
         },
         "pieType": "pie",
         "tooltip": {
@@ -624,7 +637,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  coin,\n  SUM(price * size) AS volume\nFROM hl_fills\nWHERE user_address = '${address}'\n  AND $__timeFilter(timestamp)\nGROUP BY coin\nORDER BY volume DESC\nLIMIT 15",
+          "rawSql": "SELECT \n  m.symbol,\n  SUM(price * size) AS volume\nFROM fills f JOIN markets m ON f.market_id = m.id\nWHERE user_address = '${address}'\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n  AND $__timeFilter(timestamp)\nGROUP BY m.symbol\nORDER BY volume DESC\nLIMIT 15",
           "refId": "A"
         }
       ],
@@ -759,7 +772,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  timestamp,\n  coin,\n  side,\n  price,\n  size,\n  closed_pnl,\n  fee,\n  fill_id\nFROM hl_fills\nWHERE user_address = '${address}'\n  AND $__timeFilter(timestamp)\nORDER BY timestamp DESC\nLIMIT 100",
+          "rawSql": "SELECT \n  timestamp,\n  m.symbol,\n  side,\n  price,\n  size,\n  closed_pnl,\n  fee,\n  fill_id\nFROM fills f JOIN markets m ON f.market_id = m.id\nWHERE user_address = '${address}'\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n  AND $__timeFilter(timestamp)\nORDER BY timestamp DESC\nLIMIT 100",
           "refId": "A"
         }
       ],
@@ -830,7 +843,10 @@
       "id": 10,
       "options": {
         "legend": {
-          "calcs": ["sum", "mean"],
+          "calcs": [
+            "sum",
+            "mean"
+          ],
           "displayMode": "table",
           "placement": "bottom",
           "showLegend": true
@@ -849,7 +865,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT \n  DATE_TRUNC('day', timestamp) AS time,\n  SUM(closed_pnl) AS daily_pnl\nFROM hl_fills\nWHERE user_address = '${address}'\n  AND $__timeFilter(timestamp)\nGROUP BY time\nORDER BY time",
+          "rawSql": "SELECT \n  DATE_TRUNC('day', timestamp) AS time,\n  SUM(closed_pnl) AS daily_pnl\nFROM fills f JOIN markets m ON f.market_id = m.id\nWHERE user_address = '${address}'\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n  AND $__timeFilter(timestamp)\nGROUP BY time\nORDER BY time",
           "refId": "A"
         }
       ],
@@ -920,7 +936,10 @@
       "id": 11,
       "options": {
         "legend": {
-          "calcs": ["sum", "mean"],
+          "calcs": [
+            "sum",
+            "mean"
+          ],
           "displayMode": "table",
           "placement": "bottom",
           "showLegend": true
@@ -939,7 +958,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT \n  DATE_TRUNC('hour', timestamp) AS time,\n  COUNT(*) AS trade_count\nFROM hl_fills\nWHERE user_address = '${address}'\n  AND $__timeFilter(timestamp)\nGROUP BY time\nORDER BY time",
+          "rawSql": "SELECT \n  DATE_TRUNC('hour', timestamp) AS time,\n  COUNT(*) AS trade_count\nFROM fills f JOIN markets m ON f.market_id = m.id\nWHERE user_address = '${address}'\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n  AND $__timeFilter(timestamp)\nGROUP BY time\nORDER BY time",
           "refId": "A"
         }
       ],
@@ -950,7 +969,11 @@
   "refresh": "30s",
   "schemaVersion": 38,
   "style": "dark",
-  "tags": ["address", "user", "trading"],
+  "tags": [
+    "address",
+    "user",
+    "trading"
+  ],
   "templating": {
     "list": [
       {
@@ -970,6 +993,31 @@
         "regex": "",
         "skipUrlSync": false,
         "type": "datasource"
+      },
+      {
+        "allValue": "All",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "All"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "${datasource}"
+        },
+        "definition": "SELECT 'All' AS market_type UNION SELECT 'spot' UNION SELECT 'perp' ORDER BY 1",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Market Type",
+        "multi": false,
+        "name": "market_type",
+        "options": [],
+        "query": "SELECT 'All' AS market_type UNION SELECT 'spot' UNION SELECT 'perp' ORDER BY 1",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
       },
       {
         "current": {

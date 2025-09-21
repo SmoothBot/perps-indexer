@@ -1,5 +1,6 @@
 mod app;
 mod ingest;
+mod market;
 mod model;
 mod pipeline;
 mod store;

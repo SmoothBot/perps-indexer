@@ -108,7 +108,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT \n  hour AS time,\n  SUM(volume)::float AS \"Total Volume\"\nFROM hl_hourly_user_stats\nWHERE $__timeFilter(hour)\nGROUP BY hour\nORDER BY hour ASC",
+          "rawSql": "SELECT \n  hour AS time,\n  SUM(volume)::float AS \"Total Volume\"\nFROM hourly_user_stats hus JOIN markets m ON hus.market_id = m.id\nWHERE $__timeFilter(hour)\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\nGROUP BY hour\nORDER BY hour ASC",
           "refId": "A",
           "sql": {
             "columns": [
@@ -221,7 +221,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  COUNT(DISTINCT user_address) AS \"Active Traders\"\nFROM hl_hourly_user_stats\nWHERE $__timeFilter(hour)",
+          "rawSql": "SELECT \n  COUNT(DISTINCT user_address) AS \"Active Traders\"\nFROM hourly_user_stats hus JOIN markets m ON hus.market_id = m.id\nWHERE $__timeFilter(hour)\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')",
           "refId": "A"
         }
       ],
@@ -301,7 +301,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  SUM(trade_count)::bigint AS \"Total Trades\"\nFROM hl_hourly_user_stats\nWHERE $__timeFilter(hour)",
+          "rawSql": "SELECT \n  SUM(trade_count)::bigint AS \"Total Trades\"\nFROM hourly_user_stats hus JOIN markets m ON hus.market_id = m.id\nWHERE $__timeFilter(hour)\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')",
           "refId": "A"
         }
       ],
@@ -364,7 +364,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  SUM(volume)::float AS \"Total Volume\"\nFROM hl_hourly_user_stats\nWHERE $__timeFilter(hour)",
+          "rawSql": "SELECT \n  SUM(volume)::float AS \"Total Volume\"\nFROM hourly_user_stats hus JOIN markets m ON hus.market_id = m.id\nWHERE $__timeFilter(hour)\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')",
           "refId": "A"
         }
       ],
@@ -431,7 +431,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  SUM(total_pnl)::float AS \"Total PnL\"\nFROM hl_hourly_user_stats\nWHERE $__timeFilter(hour)",
+          "rawSql": "SELECT \n  SUM(total_pnl)::float AS \"Total PnL\"\nFROM hourly_user_stats hus JOIN markets m ON hus.market_id = m.id\nWHERE $__timeFilter(hour)\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')",
           "refId": "A"
         }
       ],
@@ -503,7 +503,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  coin,\n  SUM(volume)::float AS volume\nFROM hl_hourly_user_stats\nWHERE $__timeFilter(hour)\nGROUP BY coin\nORDER BY volume DESC\nLIMIT 10",
+          "rawSql": "SELECT \n  m.symbol,\n  SUM(volume)::float AS volume\nFROM hourly_user_stats hus JOIN markets m ON hus.market_id = m.id\nWHERE $__timeFilter(hour)\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\nGROUP BY m.symbol\nORDER BY volume DESC\nLIMIT 10",
           "refId": "A"
         }
       ],
@@ -614,7 +614,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT \n  hour AS time,\n  SUM(total_pnl)::float AS \"PnL\"\nFROM hl_hourly_user_stats\nWHERE $__timeFilter(hour)\nGROUP BY hour\nORDER BY hour ASC",
+          "rawSql": "SELECT \n  hour AS time,\n  SUM(total_pnl)::float AS \"PnL\"\nFROM hourly_user_stats hus JOIN markets m ON hus.market_id = m.id\nWHERE $__timeFilter(hour)\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\nGROUP BY hour\nORDER BY hour ASC",
           "refId": "A"
         }
       ],
@@ -707,7 +707,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT \n  hour AS time,\n  COUNT(DISTINCT user_address)::float AS \"Active Traders\"\nFROM hl_hourly_user_stats\nWHERE $__timeFilter(hour)\nGROUP BY hour\nORDER BY hour ASC",
+          "rawSql": "SELECT \n  hour AS time,\n  COUNT(DISTINCT user_address)::float AS \"Active Traders\"\nFROM hourly_user_stats hus JOIN markets m ON hus.market_id = m.id\nWHERE $__timeFilter(hour)\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\nGROUP BY hour\nORDER BY hour ASC",
           "refId": "A"
         }
       ],
@@ -862,7 +862,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  user_address,\n  SUM(trade_count)::bigint AS trade_count,\n  SUM(volume)::float AS volume,\n  SUM(total_pnl)::float AS total_pnl,\n  SUM(total_fees)::float AS total_fees\nFROM hl_hourly_user_stats\nWHERE $__timeFilter(hour)\n  AND ('$coin' = 'All' OR coin = '$coin')\nGROUP BY user_address\nORDER BY volume DESC\nLIMIT 100",
+          "rawSql": "SELECT \n  user_address,\n  SUM(trade_count)::bigint AS trade_count,\n  SUM(volume)::float AS volume,\n  SUM(total_pnl)::float AS total_pnl,\n  SUM(total_fees)::float AS total_fees\nFROM hourly_user_stats hus JOIN markets m ON hus.market_id = m.id\nWHERE $__timeFilter(hour)\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n  AND ('$m.symbol' = 'All' OR m.symbol = '$m.symbol')\nGROUP BY user_address\nORDER BY volume DESC\nLIMIT 100",
           "refId": "A"
         }
       ],
@@ -954,7 +954,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT \n  hour AS time,\n  SUM(total_fees)::float AS \"Total Fees\"\nFROM hl_hourly_user_stats\nWHERE $__timeFilter(hour)\nGROUP BY hour\nORDER BY hour ASC",
+          "rawSql": "SELECT \n  hour AS time,\n  SUM(total_fees)::float AS \"Total Fees\"\nFROM hourly_user_stats hus JOIN markets m ON hus.market_id = m.id\nWHERE $__timeFilter(hour)\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\nGROUP BY hour\nORDER BY hour ASC",
           "refId": "A"
         }
       ],
@@ -1047,7 +1047,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT \n  hour AS \"time\",\n  SUM(trade_count)::float AS \"Total Trades\"\nFROM hl_hourly_user_stats\nWHERE \n  hour >= $__timeFrom()::timestamptz \n  AND hour <= $__timeTo()::timestamptz\n  AND CASE \n    WHEN '${coin}' = 'All' THEN true\n    ELSE coin = '${coin}'\n  END\nGROUP BY hour\nORDER BY hour",
+          "rawSql": "SELECT \n  hour AS \"time\",\n  SUM(trade_count)::float AS \"Total Trades\"\nFROM hourly_user_stats hus JOIN markets m ON hus.market_id = m.id\nWHERE \n  hour >= $__timeFrom()::timestamptz \n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n  AND hour <= $__timeTo()::timestamptz\n  AND CASE \n    WHEN '${m.symbol}' = 'All' THEN true\n    ELSE m.symbol = '${m.symbol}'\n  END\nGROUP BY hour\nORDER BY hour",
           "refId": "A",
           "sql": {
             "columns": [
@@ -1076,7 +1076,7 @@
           "format": "time_series",
           "hide": false,
           "rawQuery": true,
-          "rawSql": "SELECT \n  hour AS \"time\",\n  coin,\n  trade_count::float AS value\nFROM hl_hourly_user_stats\nWHERE \n  hour >= $__timeFrom()::timestamptz \n  AND hour <= $__timeTo()::timestamptz\n  AND CASE \n    WHEN '${coin}' = 'All' THEN true\n    ELSE coin = '${coin}'\n  END\nORDER BY hour, coin",
+          "rawSql": "SELECT \n  hour AS \"time\",\n  m.symbol,\n  trade_count::float AS value\nFROM hourly_user_stats hus JOIN markets m ON hus.market_id = m.id\nWHERE \n  hour >= $__timeFrom()::timestamptz \n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n  AND hour <= $__timeTo()::timestamptz\n  AND CASE \n    WHEN '${m.symbol}' = 'All' THEN true\n    ELSE m.symbol = '${m.symbol}'\n  END\nORDER BY hour, m.symbol",
           "refId": "B",
           "sql": {
             "columns": [
@@ -1129,6 +1129,31 @@
         "type": "datasource"
       },
       {
+        "allValue": "All",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "All"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "${datasource}"
+        },
+        "definition": "SELECT 'All' AS market_type UNION SELECT 'spot' UNION SELECT 'perp' ORDER BY 1",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Market Type",
+        "multi": false,
+        "name": "market_type",
+        "options": [],
+        "query": "SELECT 'All' AS market_type UNION SELECT 'spot' UNION SELECT 'perp' ORDER BY 1",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
         "current": {
           "selected": false,
           "text": "All",
@@ -1138,14 +1163,14 @@
           "type": "postgres",
           "uid": "${datasource}"
         },
-        "definition": "SELECT DISTINCT coin FROM hl_hourly_user_stats UNION ALL SELECT 'All' ORDER BY 1",
+        "definition": "SELECT DISTINCT m.symbol FROM hourly_user_stats hus JOIN markets m ON hus.market_id = m.id UNION ALL SELECT 'All' ORDER BY 1",
         "hide": 0,
         "includeAll": false,
         "label": "Coin",
         "multi": false,
-        "name": "coin",
+        "name": "m.symbol",
         "options": [],
-        "query": "SELECT DISTINCT coin FROM hl_hourly_user_stats UNION ALL SELECT 'All' ORDER BY 1",
+        "query": "SELECT DISTINCT m.symbol FROM hourly_user_stats hus JOIN markets m ON hus.market_id = m.id UNION ALL SELECT 'All' ORDER BY 1",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,

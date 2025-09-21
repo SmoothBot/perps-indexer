@@ -58,7 +58,9 @@
         "justifyMode": "center",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -74,7 +76,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  last_record_ts AS \"Last Checkpoint\"\nFROM ingest_checkpoints\nWHERE source = 's3'",
+          "rawSql": "SELECT \n  last_record_ts AS \"Last Checkpoint\"\nFROM ingest_checkpoints\nWHERE source = 's3'\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')",
           "refId": "A"
         }
       ],
@@ -118,7 +120,9 @@
         "justifyMode": "center",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -134,7 +138,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COUNT(*) AS \"Total Fills\" FROM hl_fills",
+          "rawSql": "SELECT COUNT(*) AS \"Total Fills\" FROM fills f JOIN markets m ON f.market_id = m.id",
           "refId": "A"
         }
       ],
@@ -177,7 +181,9 @@
         "justifyMode": "center",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -193,7 +199,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  MIN(timestamp) AS \"Earliest Data\"\nFROM hl_fills",
+          "rawSql": "SELECT \n  MIN(timestamp) AS \"Earliest Data\"\nFROM fills f JOIN markets m ON f.market_id = m.id",
           "refId": "A"
         }
       ],
@@ -236,7 +242,9 @@
         "justifyMode": "center",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -252,7 +260,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  MAX(timestamp) AS \"Latest Data\"\nFROM hl_fills",
+          "rawSql": "SELECT \n  MAX(timestamp) AS \"Latest Data\"\nFROM fills f JOIN markets m ON f.market_id = m.id",
           "refId": "A"
         }
       ],
@@ -341,7 +349,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT \n  DATE_TRUNC('hour', timestamp) AS time,\n  COUNT(*) AS fills_count\nFROM hl_fills\nWHERE $__timeFilter(timestamp)\nGROUP BY time\nORDER BY time ASC",
+          "rawSql": "SELECT \n  DATE_TRUNC('hour', timestamp) AS time,\n  COUNT(*) AS fills_count\nFROM fills f JOIN markets m ON f.market_id = m.id\nWHERE $__timeFilter(timestamp)\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\nGROUP BY time\nORDER BY time ASC",
           "refId": "A"
         }
       ],
@@ -452,7 +460,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH hourly_data AS (\n  SELECT \n    DATE_TRUNC('hour', timestamp) AS hour,\n    COUNT(*) AS fills_count\n  FROM hl_fills\n  GROUP BY hour\n),\nhour_series AS (\n  SELECT generate_series(\n    (SELECT MIN(hour) FROM hourly_data),\n    (SELECT MAX(hour) FROM hourly_data),\n    '1 hour'::interval\n  ) AS hour\n),\nmissing_hours AS (\n  SELECT \n    hs.hour,\n    COALESCE(hd.fills_count, 0) AS fills_count\n  FROM hour_series hs\n  LEFT JOIN hourly_data hd ON hs.hour = hd.hour\n  WHERE hd.fills_count IS NULL OR hd.fills_count < 100\n)\nSELECT \n  hour AS gap_start,\n  LEAD(hour) OVER (ORDER BY hour) AS gap_end,\n  EXTRACT(EPOCH FROM (LEAD(hour) OVER (ORDER BY hour) - hour)) / 3600 AS gap_hours,\n  fills_count\nFROM missing_hours\nWHERE hour >= NOW() - INTERVAL '30 days'\nORDER BY hour DESC\nLIMIT 100",
+          "rawSql": "WITH hourly_data AS (\n  SELECT \n    DATE_TRUNC('hour', timestamp) AS hour,\n    COUNT(*) AS fills_count\n  FROM fills f JOIN markets m ON f.market_id = m.id\n  GROUP BY hour\n),\nhour_series AS (\n  SELECT generate_series(\n    (SELECT MIN(hour) FROM hourly_data),\n    (SELECT MAX(hour) FROM hourly_data),\n    '1 hour'::interval\n  ) AS hour\n),\nmissing_hours AS (\n  SELECT \n    hs.hour,\n    COALESCE(hd.fills_count, 0) AS fills_count\n  FROM hour_series hs\n  LEFT JOIN hourly_data hd ON hs.hour = hd.hour\n  WHERE hd.fills_count IS NULL OR hd.fills_count < 100\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n)\nSELECT \n  hour AS gap_start,\n  LEAD(hour) OVER (ORDER BY hour) AS gap_end,\n  EXTRACT(EPOCH FROM (LEAD(hour) OVER (ORDER BY hour) - hour)) / 3600 AS gap_hours,\n  fills_count\nFROM missing_hours\nWHERE hour >= NOW() - INTERVAL '30 days'\nORDER BY hour DESC\nLIMIT 100",
           "refId": "A"
         }
       ],
@@ -523,7 +531,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  DATE_TRUNC('day', timestamp) AS day,\n  COUNT(*) AS fills_count,\n  COUNT(DISTINCT user_address) AS unique_traders,\n  COUNT(DISTINCT coin) AS unique_coins,\n  SUM(price * size) AS volume,\n  MIN(timestamp) AS first_fill,\n  MAX(timestamp) AS last_fill\nFROM hl_fills\nWHERE $__timeFilter(timestamp)\nGROUP BY day\nORDER BY day DESC",
+          "rawSql": "SELECT \n  DATE_TRUNC('day', timestamp) AS day,\n  COUNT(*) AS fills_count,\n  COUNT(DISTINCT user_address) AS unique_traders,\n  COUNT(DISTINCT m.symbol) AS unique_coins,\n  SUM(price * size) AS volume,\n  MIN(timestamp) AS first_fill,\n  MAX(timestamp) AS last_fill\nFROM fills f JOIN markets m ON f.market_id = m.id\nWHERE $__timeFilter(timestamp)\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\nGROUP BY day\nORDER BY day DESC",
           "refId": "A"
         }
       ],
@@ -564,7 +572,10 @@
           "displayMode": "table",
           "placement": "right",
           "showLegend": true,
-          "values": ["value", "percent"]
+          "values": [
+            "value",
+            "percent"
+          ]
         },
         "pieType": "donut",
         "tooltip": {
@@ -581,7 +592,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  coin,\n  COUNT(*) AS fills_count\nFROM hl_fills\nWHERE $__timeFilter(timestamp)\nGROUP BY coin\nORDER BY fills_count DESC\nLIMIT 20",
+          "rawSql": "SELECT \n  m.symbol,\n  COUNT(*) AS fills_count\nFROM fills f JOIN markets m ON f.market_id = m.id\nWHERE $__timeFilter(timestamp)\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\nGROUP BY m.symbol\nORDER BY fills_count DESC\nLIMIT 20",
           "refId": "A"
         }
       ],
@@ -652,7 +663,10 @@
       "id": 9,
       "options": {
         "legend": {
-          "calcs": ["lastNotNull", "mean"],
+          "calcs": [
+            "lastNotNull",
+            "mean"
+          ],
           "displayMode": "table",
           "placement": "bottom",
           "showLegend": true
@@ -671,7 +685,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT \n  DATE_TRUNC('hour', timestamp) AS time,\n  COUNT(DISTINCT user_address) AS unique_traders\nFROM hl_fills\nWHERE $__timeFilter(timestamp)\nGROUP BY time\nORDER BY time ASC",
+          "rawSql": "SELECT \n  DATE_TRUNC('hour', timestamp) AS time,\n  COUNT(DISTINCT user_address) AS unique_traders\nFROM fills f JOIN markets m ON f.market_id = m.id\nWHERE $__timeFilter(timestamp)\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\nGROUP BY time\nORDER BY time ASC",
           "refId": "A"
         }
       ],
@@ -682,7 +696,10 @@
   "refresh": "30s",
   "schemaVersion": 38,
   "style": "dark",
-  "tags": ["data-quality", "monitoring"],
+  "tags": [
+    "data-quality",
+    "monitoring"
+  ],
   "templating": {
     "list": [
       {
@@ -702,6 +719,31 @@
         "regex": "",
         "skipUrlSync": false,
         "type": "datasource"
+      },
+      {
+        "allValue": "All",
+        "current": {
+          "selected": true,
+          "text": "All",
+          "value": "All"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "${datasource}"
+        },
+        "definition": "SELECT 'All' AS market_type UNION SELECT 'spot' UNION SELECT 'perp' ORDER BY 1",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Market Type",
+        "multi": false,
+        "name": "market_type",
+        "options": [],
+        "query": "SELECT 'All' AS market_type UNION SELECT 'spot' UNION SELECT 'perp' ORDER BY 1",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
       }
     ]
   },

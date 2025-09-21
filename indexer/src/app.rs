@@ -19,7 +19,7 @@ impl App {
         info!("Initializing application");
 
         // Create store
-        let store = Arc::new(Store::new(pool));
+        let store = Arc::new(Store::new(pool).await?);
 
         // Create S3 ingest source
         let source = S3Source::new(
