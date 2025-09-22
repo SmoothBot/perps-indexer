@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   postgres:
-    image: postgres:15
+    image: postgres:16
     container_name: indexer_postgres
     environment:
       POSTGRES_DB: hl_indexer
@@ -32,7 +32,7 @@ services:
       -c random_page_cost=1.1
 
   migration:
-    image: postgres:15
+    image: postgres:16
     depends_on:
       postgres:
         condition: service_healthy
@@ -50,7 +50,7 @@ services:
   indexer:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.prebuilt
     container_name: indexer_backfill
     depends_on:
       migration:

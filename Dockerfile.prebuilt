@@ -1,0 +1,32 @@
+# Simple Dockerfile using pre-built binary
+FROM debian:bookworm-slim
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    libssl3 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy the pre-built binary from host
+COPY target/release/indexer /usr/local/bin/indexer
+
+# Copy migration files
+COPY migrations /migrations
+
+# Copy the backfill loop script
+COPY scripts/backfill-loop.sh /usr/local/bin/backfill-loop.sh
+RUN chmod +x /usr/local/bin/backfill-loop.sh
+
+# Create non-root user
+RUN useradd -m -u 1000 indexer && \
+    chown -R indexer:indexer /migrations
+
+USER indexer
+
+# Set environment variables for AWS SDK to use IAM role
+ENV AWS_REGION=us-east-1
+ENV DATABASE_URL=postgresql://postgres:postgres@postgres:5432/hl_indexer
+
+# Default to backfill command
+ENTRYPOINT ["/usr/local/bin/indexer"]
+CMD ["backfill"]
