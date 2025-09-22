@@ -1,0 +1,27 @@
+[Unit]
+Description=Hyperliquid Indexer Backfill Service
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/home/ubuntu/rust-indexer
+Environment="START_DATE=2024-03-22T00:00:00Z"
+Environment="END_DATE=2024-03-23T00:00:00Z"
+Environment="DB_HOST=localhost"
+Environment="DB_PORT=5432"
+Environment="DB_NAME=hl_indexer"
+Environment="DB_USER=postgres"
+Environment="DB_PASSWORD=postgres"
+Environment="AWS_REGION=us-east-1"
+ExecStart=/bin/bash scripts/ec2-backfill.sh
+User=ubuntu
+Group=docker
+Restart=on-failure
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

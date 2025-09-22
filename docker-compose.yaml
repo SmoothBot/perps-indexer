@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: indexer_postgres
+    environment:
+      POSTGRES_DB: hl_indexer
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: >
+      postgres
+      -c shared_buffers=2GB
+      -c work_mem=256MB
+      -c maintenance_work_mem=1GB
+      -c effective_cache_size=6GB
+      -c max_wal_size=2GB
+      -c checkpoint_timeout=15min
+      -c max_parallel_workers_per_gather=4
+      -c max_parallel_workers=8
+      -c max_parallel_maintenance_workers=4
+      -c random_page_cost=1.1
+
+  migration:
+    image: postgres:15
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./migrations:/migrations:ro
+    environment:
+      PGPASSWORD: postgres
+    command: >
+      sh -c "
+      echo 'Running migrations...' &&
+      psql -h postgres -U postgres -d hl_indexer -f /migrations/0001_complete_schema.sql &&
+      echo 'Migrations complete!'
+      "
+
+  indexer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: indexer_backfill
+    depends_on:
+      migration:
+        condition: service_completed_successfully
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/hl_indexer
+      AWS_REGION: us-east-1
+      RUST_LOG: info,indexer=debug
+      INDEXER__TELEMETRY__ENABLED: "false"
+    entrypoint: ["/usr/local/bin/backfill-loop.sh"]
+    restart: unless-stopped
+    networks:
+      - default
+
+  # Optional: Grafana for monitoring
+  grafana:
+    image: grafana/grafana:latest
+    container_name: indexer_grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_INSTALL_PLUGINS: postgres
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    networks:
+      - default
+    profiles:
+      - monitoring
+
+networks:
+  default:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  grafana_data:
