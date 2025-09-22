@@ -50,7 +50,7 @@ services:
   indexer:
     build:
       context: .
-      dockerfile: Dockerfile.prebuilt
+      dockerfile: Dockerfile.linux
     container_name: indexer_backfill
     depends_on:
       migration:
