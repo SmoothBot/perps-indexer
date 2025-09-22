@@ -233,13 +233,26 @@ dev: db-up migrate
 reset: db-down clean
     @echo "⚠️  Everything has been reset"
 
-# Refresh the hourly user stats materialized view
+# Refresh all materialized views
 refresh-matview:
-    @echo "🔄 Refreshing materialized view hl_hourly_user_stats..."
-    @docker exec hl_indexer_postgres psql -U postgres -d hl_indexer -c "REFRESH MATERIALIZED VIEW CONCURRENTLY hl_hourly_user_stats;" 2>/dev/null || \
-        docker exec hl_indexer_postgres psql -U postgres -d hl_indexer -c "REFRESH MATERIALIZED VIEW hl_hourly_user_stats;" || \
-        echo "⚠️  Failed to refresh view. It may not exist yet. Run 'just migrate' first."
-    @echo "✅ Materialized view refreshed"
+    @echo "🔄 Refreshing all materialized views..."
+    @echo "  🔄 Refreshing hourly_user_stats..."
+    @docker exec hl_indexer_postgres psql -U postgres -d hl_indexer -c "REFRESH MATERIALIZED VIEW CONCURRENTLY hourly_user_stats;" 2>/dev/null || docker exec hl_indexer_postgres psql -U postgres -d hl_indexer -c "REFRESH MATERIALIZED VIEW hourly_user_stats;" 2>/dev/null || echo "    ⚠️  Failed to refresh hourly_user_stats"
+    @echo "  🔄 Refreshing hourly_market_stats..."
+    @docker exec hl_indexer_postgres psql -U postgres -d hl_indexer -c "REFRESH MATERIALIZED VIEW CONCURRENTLY hourly_market_stats;" 2>/dev/null || docker exec hl_indexer_postgres psql -U postgres -d hl_indexer -c "REFRESH MATERIALIZED VIEW hourly_market_stats;" 2>/dev/null || echo "    ⚠️  Failed to refresh hourly_market_stats"
+    @echo "  🔄 Refreshing hourly_exchange_stats..."
+    @docker exec hl_indexer_postgres psql -U postgres -d hl_indexer -c "REFRESH MATERIALIZED VIEW CONCURRENTLY hourly_exchange_stats;" 2>/dev/null || docker exec hl_indexer_postgres psql -U postgres -d hl_indexer -c "REFRESH MATERIALIZED VIEW hourly_exchange_stats;" 2>/dev/null || echo "    ⚠️  Failed to refresh hourly_exchange_stats"
+    @echo "  🔄 Refreshing market_summary..."
+    @docker exec hl_indexer_postgres psql -U postgres -d hl_indexer -c "REFRESH MATERIALIZED VIEW CONCURRENTLY market_summary;" 2>/dev/null || docker exec hl_indexer_postgres psql -U postgres -d hl_indexer -c "REFRESH MATERIALIZED VIEW market_summary;" 2>/dev/null || echo "    ⚠️  Failed to refresh market_summary"
+    @echo "  🔄 Refreshing trader_summary..."
+    @docker exec hl_indexer_postgres psql -U postgres -d hl_indexer -c "REFRESH MATERIALIZED VIEW CONCURRENTLY trader_summary;" 2>/dev/null || docker exec hl_indexer_postgres psql -U postgres -d hl_indexer -c "REFRESH MATERIALIZED VIEW trader_summary;" 2>/dev/null || echo "    ⚠️  Failed to refresh trader_summary"
+    @echo "  🔄 Refreshing trader_market_summary..."
+    @docker exec hl_indexer_postgres psql -U postgres -d hl_indexer -c "REFRESH MATERIALIZED VIEW CONCURRENTLY trader_market_summary;" 2>/dev/null || docker exec hl_indexer_postgres psql -U postgres -d hl_indexer -c "REFRESH MATERIALIZED VIEW trader_market_summary;" 2>/dev/null || echo "    ⚠️  Failed to refresh trader_market_summary"
+    @echo "  🔄 Refreshing daily_market_stats..."
+    @docker exec hl_indexer_postgres psql -U postgres -d hl_indexer -c "REFRESH MATERIALIZED VIEW CONCURRENTLY daily_market_stats;" 2>/dev/null || docker exec hl_indexer_postgres psql -U postgres -d hl_indexer -c "REFRESH MATERIALIZED VIEW daily_market_stats;" 2>/dev/null || echo "    ⚠️  Failed to refresh daily_market_stats"
+    @echo "  🔄 Refreshing large_trades..."
+    @docker exec hl_indexer_postgres psql -U postgres -d hl_indexer -c "REFRESH MATERIALIZED VIEW CONCURRENTLY large_trades;" 2>/dev/null || docker exec hl_indexer_postgres psql -U postgres -d hl_indexer -c "REFRESH MATERIALIZED VIEW large_trades;" 2>/dev/null || echo "    ⚠️  Failed to refresh large_trades"
+    @echo "✅ All materialized views refreshed"
 
 # Create the materialized view if it doesn't exist
 create-matview:

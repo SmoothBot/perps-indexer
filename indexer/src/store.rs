@@ -58,11 +58,6 @@ impl Store {
             "Inserted fills"
         );
 
-        // Refresh materialized view after inserting fills
-        if total_inserted > 0 {
-            self.refresh_hourly_stats_view().await?;
-        }
-
         Ok(total_inserted)
     }
 
@@ -481,7 +476,7 @@ impl Store {
                             duration_ms = elapsed.as_millis(),
                             "Refreshed materialized view"
                         );
-                        counter!("indexer_materialized_view_refreshes", "view" => view).increment(1);
+                        counter!("indexer_materialized_view_refreshes", "view" => view.to_string()).increment(1);
                     }
                     Err(e) => {
                         // Log error but don't fail the operation
@@ -490,7 +485,7 @@ impl Store {
                             error = %e,
                             "Failed to refresh materialized view"
                         );
-                        counter!("indexer_materialized_view_refresh_errors", "view" => view).increment(1);
+                        counter!("indexer_materialized_view_refresh_errors", "view" => view.to_string()).increment(1);
                     }
                 }
             } else {

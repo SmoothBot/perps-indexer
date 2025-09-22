@@ -349,7 +349,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  hour AS time,\n  SUM(total_fills) AS fills_count\nFROM hourly_exchange_stats hes\nWHERE $__timeFilter(hour)\n  AND ('${market_type}' = 'All' OR '${market_type}' = 'All')\nGROUP BY hour\nORDER BY hour ASC",
+          "rawSql": "SELECT\n  DATE_TRUNC('hour', timestamp) AS time,\n  COUNT(*) AS fills_count\nFROM fills f\nWHERE $__timeFilter(timestamp)\n  AND exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}')\nGROUP BY DATE_TRUNC('hour', timestamp)\nORDER BY time ASC",
           "refId": "A"
         }
       ],

@@ -85,7 +85,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  SUM(closed_pnl) AS \"Total PnL\"\nFROM fills f JOIN markets m ON f.market_id = m.id\nWHERE user_address = '${address}'\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n  AND $__timeFilter(timestamp)",
+          "rawSql": "SELECT \n  SUM(total_pnl) AS \"Total PnL\"\nFROM hourly_user_stats\nWHERE user_address = '${address}'\n  AND ('${market_type}' = 'All' OR market_type = '${market_type}')\n  AND $__timeFilter(hour)",
           "refId": "A"
         }
       ],
@@ -209,7 +209,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  COUNT(*) AS \"Total Trades\"\nFROM fills f JOIN markets m ON f.market_id = m.id\nWHERE user_address = '${address}'\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n  AND $__timeFilter(timestamp)",
+          "rawSql": "SELECT \n  SUM(trade_count) AS \"Total Trades\"\nFROM hourly_user_stats\nWHERE user_address = '${address}'\n  AND ('${market_type}' = 'All' OR market_type = '${market_type}')\n  AND $__timeFilter(hour)",
           "refId": "A"
         }
       ],
@@ -271,7 +271,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  SUM(fee) AS \"Total Fees\"\nFROM fills f JOIN markets m ON f.market_id = m.id\nWHERE user_address = '${address}'\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n  AND $__timeFilter(timestamp)",
+          "rawSql": "SELECT \n  SUM(total_fees) AS \"Total Fees\"\nFROM hourly_user_stats\nWHERE user_address = '${address}'\n  AND ('${market_type}' = 'All' OR market_type = '${market_type}')\n  AND $__timeFilter(hour)",
           "refId": "A"
         }
       ],
@@ -919,7 +919,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT \n  DATE_TRUNC('day', timestamp) AS time,\n  SUM(closed_pnl) AS daily_pnl\nFROM fills f JOIN markets m ON f.market_id = m.id\nWHERE user_address = '${address}'\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n  AND $__timeFilter(timestamp)\nGROUP BY time\nORDER BY time",
+          "rawSql": "SELECT \n  DATE_TRUNC('day', hour) AS time,\n  SUM(total_pnl) AS daily_pnl\nFROM hourly_user_stats\nWHERE user_address = '${address}'\n  AND ('${market_type}' = 'All' OR market_type = '${market_type}')\n  AND $__timeFilter(hour)\nGROUP BY time\nORDER BY time",
           "refId": "A"
         }
       ],

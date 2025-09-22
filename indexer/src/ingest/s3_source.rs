@@ -2,6 +2,7 @@ use super::IngestSource;
 use crate::model::{Fill, IngestBatch, TradeSide};
 use async_trait::async_trait;
 use aws_sdk_s3::Client as S3Client;
+use aws_sdk_s3::operation::get_object::GetObjectError;
 use chrono::{DateTime, NaiveDate, Timelike, Utc};
 use indexer_core::{Error, Result};
 use serde::Deserialize;
@@ -123,6 +124,10 @@ impl S3Source {
             .map_err(|e| {
                 let details = match e {
                     aws_sdk_s3::error::SdkError::ServiceError(ref err) => {
+                        // Check if this is a NoSuchKey error - this is expected for missing hourly files
+                        if let GetObjectError::NoSuchKey(_) = err.err() {
+                            return Error::Validation(format!("S3 key '{}' does not exist (end of available data)", key));
+                        }
                         format!("S3 service error for key '{}': {:?}", key, err)
                     }
                     _ => format!("Failed to fetch S3 key '{}': {}", key, e),
@@ -342,7 +347,21 @@ impl IngestSource for S3Source {
         };
 
         // Fetch data for the current hour
-        let (data, bytes_downloaded) = self.fetch_hour_data(current_date, current_hour).await?;
+        let (data, bytes_downloaded) = match self.fetch_hour_data(current_date, current_hour).await {
+            Ok((data, bytes)) => (data, bytes),
+            Err(Error::Validation(msg)) if msg.contains("does not exist") => {
+                // S3 key doesn't exist - this means we've reached the end of available data
+                debug!("Reached end of available data: {}", msg);
+                return Ok(IngestBatch {
+                    fills: vec![],
+                    cursor: None,
+                    has_more: false,
+                    bytes_downloaded: Some(0),
+                });
+            }
+            Err(e) => return Err(e),
+        };
+
         let fills = self.parse_fills(&data, current_date)?;
 
         // Calculate next cursor

@@ -1,7 +1,7 @@
 use crate::ingest::IngestSource;
 use crate::model::{Checkpoint, IngestBatch};
 use crate::store::Store;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Timelike, Utc};
 use indexer_core::backoff::retry_with_backoff;
 use indexer_core::{Error, Result};
 use metrics::{counter, gauge, histogram};
@@ -46,7 +46,50 @@ impl Pipeline {
             "Starting backfill pipeline"
         );
 
-        // First check if we already have data for this time range
+        // Check for existing checkpoint and automatically refresh if there are significant gaps
+        let mut checkpoint = self.store
+            .get_checkpoint(self.source.source_id())
+            .await?
+            .unwrap_or_else(|| Checkpoint::new(self.source.source_id().to_string()));
+
+        // Auto-refresh checkpoint logic: if there are significant data gaps, reset checkpoint
+        if let Some(checkpoint_ts) = checkpoint.last_record_ts {
+            let gap_detection_range = checkpoint_ts.min(end_at);
+            let recent_missing_hours = self.store.get_missing_hours(start_from, gap_detection_range).await?;
+
+            if recent_missing_hours.len() > 12 { // More than 12 hours of gaps is significant
+                if let Some(earliest_gap) = recent_missing_hours.first() {
+                    warn!(
+                        "🔄 Auto-refreshing checkpoint: Found {} hours of missing data starting from {}",
+                        recent_missing_hours.len(),
+                        earliest_gap.format("%Y-%m-%d %H:%M")
+                    );
+
+                    // Reset checkpoint to earliest gap
+                    let gap_cursor = format!(
+                        "{}_{}",
+                        earliest_gap.format("%Y%m%d"),
+                        earliest_gap.hour()
+                    );
+
+                    info!(
+                        "📍 Resetting checkpoint from {} to {} (cursor: {})",
+                        checkpoint_ts.format("%Y-%m-%d %H:%M:%S"),
+                        earliest_gap.format("%Y-%m-%d %H:%M:%S"),
+                        gap_cursor
+                    );
+
+                    // Update checkpoint in memory and database
+                    checkpoint.cursor = Some(gap_cursor);
+                    checkpoint.last_record_ts = Some(*earliest_gap - chrono::Duration::milliseconds(1));
+                    self.store.save_checkpoint(&checkpoint).await?;
+
+                    info!("✅ Checkpoint auto-refresh completed - backfill will now fill {} hours of gaps", recent_missing_hours.len());
+                }
+            }
+        }
+
+        // Then check if we already have data for this time range
         let (has_data, existing_count) = self.store.check_time_range_exists(start_from, end_at).await?;
 
         if has_data {
@@ -74,31 +117,79 @@ impl Pipeline {
             }
         }
 
-        // Check for existing checkpoint
-        let mut checkpoint = self.store
-            .get_checkpoint(self.source.source_id())
-            .await?
-            .unwrap_or_else(|| Checkpoint::new(self.source.source_id().to_string()));
+        // Smart restart: Check if we should skip to the first gap or continue from checkpoint
+        let (current_start, cursor) = if let Some(checkpoint_ts) = checkpoint.last_record_ts {
+            if checkpoint_ts >= end_at {
+                // Checkpoint is after our end range - data already complete
+                info!(
+                    "✅ Checkpoint ({}) is after end ({}). Data already complete.",
+                    checkpoint_ts.format("%Y-%m-%d %H:%M:%S"),
+                    end_at.format("%Y-%m-%d %H:%M:%S")
+                );
+                return Ok(());
+            } else if checkpoint_ts > start_from {
+                // Checkpoint is ahead of start - check for gaps but prefer continuing forward
+                info!(
+                    "📍 Found checkpoint at {} (ahead of start {})",
+                    checkpoint_ts.format("%Y-%m-%d %H:%M:%S"),
+                    start_from.format("%Y-%m-%d %H:%M:%S")
+                );
 
-        // Use the requested start time if it's earlier than the checkpoint
-        // This allows backfilling historical data gaps
-        let current_start = if let Some(checkpoint_ts) = checkpoint.last_record_ts {
-            if start_from < checkpoint_ts {
-                // User wants to backfill earlier data, reset cursor for this range
-                start_from
+                // Check for gaps between start and checkpoint, but only if they're significant
+                let missing_before_checkpoint = self.store.get_missing_hours(start_from, checkpoint_ts).await?;
+
+                // Filter gaps to only those after start_from (in case get_missing_hours returns earlier ones)
+                let gaps_after_start: Vec<_> = missing_before_checkpoint
+                    .into_iter()
+                    .filter(|&h| h >= start_from)
+                    .collect();
+
+                if gaps_after_start.len() > 24 {  // Only go back if there are more than 24 hours of gaps
+                    let first_gap = gaps_after_start[0];
+                    info!(
+                        "⚠️ Found {} hours of gaps before checkpoint. Starting from first gap at {}",
+                        gaps_after_start.len(),
+                        first_gap.format("%Y-%m-%d %H:%M")
+                    );
+
+                    // Create cursor for the gap hour
+                    let gap_cursor = Some(format!(
+                        "{}_{}",
+                        first_gap.format("%Y%m%d"),
+                        first_gap.hour()
+                    ));
+                    (first_gap, gap_cursor)
+                } else if !gaps_after_start.is_empty() {
+                    info!(
+                        "ℹ️ Found {} hours of gaps before checkpoint, but continuing from checkpoint for efficiency",
+                        gaps_after_start.len()
+                    );
+                    // Continue from checkpoint - the gaps are minor and can be filled later
+                    (checkpoint_ts, checkpoint.cursor.clone())
+                } else {
+                    // No gaps, continue from checkpoint
+                    info!(
+                        "✅ No gaps found. Continuing from checkpoint at {}",
+                        checkpoint_ts.format("%Y-%m-%d %H:%M:%S")
+                    );
+                    (checkpoint_ts, checkpoint.cursor.clone())
+                }
             } else {
-                // Continue from checkpoint
-                checkpoint_ts
+                // Checkpoint is before or at start - begin from start
+                info!(
+                    "📍 Checkpoint ({}) is at/before start ({}). Starting from beginning.",
+                    checkpoint_ts.format("%Y-%m-%d %H:%M:%S"),
+                    start_from.format("%Y-%m-%d %H:%M:%S")
+                );
+                (start_from, None)
             }
         } else {
-            start_from
-        };
-
-        // Reset cursor if we're going back in time
-        let cursor = if start_from < checkpoint.last_record_ts.unwrap_or(start_from) {
-            None
-        } else {
-            checkpoint.cursor.clone()
+            // No checkpoint, start from beginning
+            info!(
+                "🆕 No checkpoint found. Starting from {}",
+                start_from.format("%Y-%m-%d %H:%M:%S")
+            );
+            (start_from, None)
         };
 
         // Create bounded channel for backpressure
@@ -269,10 +360,50 @@ impl Pipeline {
         info!("Starting continuous ingestion pipeline");
 
         // Get checkpoint or start from config
-        let checkpoint = self.store
+        let mut checkpoint = self.store
             .get_checkpoint(self.source.source_id())
             .await?
             .unwrap_or_else(|| Checkpoint::new(self.source.source_id().to_string()));
+
+        // Auto-refresh checkpoint for continuous ingestion if gaps detected
+        if let Some(checkpoint_ts) = checkpoint.last_record_ts {
+            let now = Utc::now();
+            let lookback_start = now - chrono::Duration::days(7); // Check last 7 days for gaps
+            let gap_detection_start = checkpoint_ts.max(lookback_start);
+
+            let recent_missing_hours = self.store.get_missing_hours(gap_detection_start, now).await?;
+
+            if recent_missing_hours.len() > 6 { // More than 6 hours of gaps in recent data
+                if let Some(earliest_gap) = recent_missing_hours.first() {
+                    warn!(
+                        "🔄 Auto-refreshing checkpoint in continuous mode: Found {} hours of missing data starting from {}",
+                        recent_missing_hours.len(),
+                        earliest_gap.format("%Y-%m-%d %H:%M")
+                    );
+
+                    // Reset checkpoint to earliest gap
+                    let gap_cursor = format!(
+                        "{}_{}",
+                        earliest_gap.format("%Y%m%d"),
+                        earliest_gap.hour()
+                    );
+
+                    info!(
+                        "📍 Resetting checkpoint from {} to {} (cursor: {})",
+                        checkpoint_ts.format("%Y-%m-%d %H:%M:%S"),
+                        earliest_gap.format("%Y-%m-%d %H:%M:%S"),
+                        gap_cursor
+                    );
+
+                    // Update checkpoint in memory and database
+                    checkpoint.cursor = Some(gap_cursor);
+                    checkpoint.last_record_ts = Some(*earliest_gap - chrono::Duration::milliseconds(1));
+                    self.store.save_checkpoint(&checkpoint).await?;
+
+                    info!("✅ Checkpoint auto-refresh completed in continuous mode - will fill {} hours of gaps", recent_missing_hours.len());
+                }
+            }
+        }
 
         let start_from = checkpoint.last_record_ts
             .or(self.config.ingest.start_from)
@@ -397,19 +528,38 @@ impl Pipeline {
     ) -> JoinHandle<Result<()>> {
         let source = Arc::clone(&self.source);
         let config = self.config.clone();
+        let store = Arc::clone(&self.store);
 
         tokio::spawn(async move {
             let mut current_start = start_from;
             let mut cursor = initial_cursor;
             let mut fetched_batches = 0u64;
+            let mut skipped_hours = 0u64;
             let mut last_fetch_log = Instant::now();
             let mut total_fills_fetched = 0u64;
 
             info!(
-                "🚀 Starting data fetch from {} to {}",
+                "🚀 Starting smart data fetch from {} to {}",
                 start_from.format("%Y-%m-%d %H:%M:%S"),
                 end_at.format("%Y-%m-%d %H:%M:%S")
             );
+
+            // Pre-fetch the list of missing hours for smart skipping
+            let missing_hours = match store.get_missing_hours(start_from, end_at).await {
+                Ok(hours) => {
+                    if !hours.is_empty() {
+                        info!(
+                            "📊 Found {} hours with missing/incomplete data to backfill",
+                            hours.len()
+                        );
+                    }
+                    hours
+                },
+                Err(e) => {
+                    warn!(error = %e, "Failed to get missing hours, falling back to sequential fetch");
+                    Vec::new()
+                }
+            };
 
             loop {
                 // Check if we've reached the end time
@@ -420,6 +570,50 @@ impl Pipeline {
                         "✅ Reached end time"
                     );
                     break;
+                }
+
+                // Smart skip: Check if this hour already has sufficient data
+                let hour_start = current_start.date_naive().and_hms_opt(current_start.hour(), 0, 0).unwrap().and_utc();
+                let hour_end = hour_start + chrono::Duration::hours(1);
+
+                // If we have a list of missing hours, use it for smart skipping
+                let should_skip = if !missing_hours.is_empty() {
+                    !missing_hours.contains(&hour_start)
+                } else {
+                    // Otherwise, check each hour individually (slower but more accurate)
+                    match store.check_time_range_exists(hour_start, hour_end).await {
+                        Ok((has_data, count)) if has_data && count >= 1000 => {
+                            debug!(
+                                hour = %hour_start.format("%Y-%m-%d %H:%M"),
+                                count = count,
+                                "Hour already has sufficient data"
+                            );
+                            true
+                        },
+                        _ => false
+                    }
+                };
+
+                if should_skip {
+                    skipped_hours += 1;
+
+                    // Advance cursor to next hour
+                    current_start = hour_end;
+                    let next_date = current_start.date_naive();
+                    let next_hour = current_start.hour();
+                    cursor = Some(format!("{}_{}", next_date.format("%Y%m%d"), next_hour));
+
+                    // Log skip progress periodically
+                    if skipped_hours % 24 == 0 || last_fetch_log.elapsed() > Duration::from_secs(5) {
+                        info!(
+                            "⏩ Skipped {} hours with existing data, now at: {}",
+                            skipped_hours,
+                            current_start.format("%Y-%m-%d %H:%M")
+                        );
+                        last_fetch_log = Instant::now();
+                    }
+
+                    continue;
                 }
 
                 // Fetch batch with retries
@@ -446,15 +640,19 @@ impl Pipeline {
                 // Update current_start for next iteration
                 if let Some(last_fill) = batch.fills.last() {
                     current_start = last_fill.timestamp;
+                } else {
+                    // If no fills, advance to next hour
+                    current_start = hour_end;
                 }
 
                 // Log fetch progress periodically
                 if last_fetch_log.elapsed() > Duration::from_secs(10) || fetched_batches == 1 {
                     info!(
-                        "📥 Fetching: {} | Batch #{} with {} fills | Total: {} fills | Channel buffer: {}",
+                        "📥 Fetching: {} | Batch #{} with {} fills | Skipped: {} hours | Total: {} fills | Channel buffer: {}",
                         current_start.format("%Y-%m-%d %H:%M:%S"),
                         fetched_batches,
                         batch_fill_count,
+                        skipped_hours,
                         total_fills_fetched,
                         config.pipeline.channel_buffer_size - tx.capacity()
                     );
@@ -476,7 +674,10 @@ impl Pipeline {
                 counter!("indexer_fetcher_batches").increment(1);
             }
 
-            info!("📦 Fetcher completed: {} batches, {} fills total", fetched_batches, total_fills_fetched);
+            info!(
+                "📦 Fetcher completed: {} batches fetched, {} hours skipped, {} fills total",
+                fetched_batches, skipped_hours, total_fills_fetched
+            );
 
             Ok(())
         })
