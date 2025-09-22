@@ -41,7 +41,7 @@ impl Store {
         }
 
         // Process in large chunks for better throughput
-        const CHUNK_SIZE: usize = 50000; // Optimal chunk size for PostgreSQL
+        const CHUNK_SIZE: usize = 200000; // Increased batch size for faster inserts
         let mut total_inserted = 0;
 
         for chunk in fills.chunks(CHUNK_SIZE) {

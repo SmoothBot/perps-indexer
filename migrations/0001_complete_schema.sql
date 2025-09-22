@@ -573,7 +573,7 @@ CREATE INDEX idx_large_trades_user ON large_trades(exchange_id, user_address);
 CREATE INDEX idx_large_trades_market ON large_trades(exchange_id, market_id);
 CREATE INDEX idx_large_trades_class ON large_trades(trade_class);
 
--- hourly_ingest_stats: For monitoring data ingestion
+-- hourly_ingest_stats: For monitoring data ingestion (FIXED - removed nested aggregate)
 CREATE MATERIALIZED VIEW hourly_ingest_stats AS
 SELECT
     f.exchange_id,
@@ -583,15 +583,7 @@ SELECT
     COUNT(DISTINCT f.market_id) as active_markets,
     SUM(f.price * f.size) as total_volume,
     MIN(f.timestamp) as first_fill_time,
-    MAX(f.timestamp) as last_fill_time,
-    -- Distribution by market
-    jsonb_object_agg(
-        m.symbol,
-        jsonb_build_object(
-            'count', COUNT(*) FILTER (WHERE m.symbol = m.symbol),
-            'volume', SUM(f.price * f.size) FILTER (WHERE m.symbol = m.symbol)
-        )
-    ) as market_distribution
+    MAX(f.timestamp) as last_fill_time
 FROM fills f
 JOIN markets m ON f.market_id = m.id
 GROUP BY f.exchange_id, DATE_TRUNC('hour', f.timestamp);

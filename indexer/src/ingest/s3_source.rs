@@ -6,7 +6,9 @@ use aws_sdk_s3::operation::get_object::GetObjectError;
 use chrono::{DateTime, NaiveDate, Timelike, Utc};
 use indexer_core::{Error, Result};
 use serde::Deserialize;
-use tracing::{debug, instrument};
+use tracing::{debug, info, instrument};
+use futures::future::join_all;
+use std::sync::Arc;
 
 // Schema v3: node_fills_by_block (July 27, 2025 onwards)
 #[derive(Debug, Clone, Deserialize)]
@@ -320,6 +322,75 @@ impl S3Source {
             source_id: None,
         })
     }
+
+    /// Fetch multiple hours of data in parallel for faster backfill
+    pub async fn fetch_parallel_batch(
+        &self,
+        start_date: DateTime<Utc>,
+        hours_to_fetch: usize,
+    ) -> Result<Vec<Fill>> {
+        const PARALLEL_FETCHES: usize = 8; // Fetch 8 hours concurrently
+
+        let mut all_fills = Vec::new();
+        let client = Arc::new(self.client.clone());
+        let bucket = self.bucket.clone();
+
+        // Process in batches of PARALLEL_FETCHES
+        for batch_start in (0..hours_to_fetch).step_by(PARALLEL_FETCHES) {
+            let batch_end = (batch_start + PARALLEL_FETCHES).min(hours_to_fetch);
+            let mut fetch_futures = Vec::new();
+
+            for hour_offset in batch_start..batch_end {
+                let fetch_date = start_date + chrono::Duration::hours(hour_offset as i64);
+                let hour = fetch_date.hour();
+                let client_clone = client.clone();
+                let bucket_clone = bucket.clone();
+
+                // Create async task for parallel fetching
+                let fetch_future = async move {
+                    let s3_source = S3Source {
+                        client: (*client_clone).clone(),
+                        bucket: bucket_clone,
+                        aws_profile: None,
+                    };
+                    s3_source.fetch_hour_data(fetch_date, hour).await
+                };
+
+                fetch_futures.push(fetch_future);
+            }
+
+            // Execute all fetches in parallel
+            let results = join_all(fetch_futures).await;
+
+            // Process results
+            for (idx, result) in results.into_iter().enumerate() {
+                let fetch_date = start_date + chrono::Duration::hours((batch_start + idx) as i64);
+
+                match result {
+                    Ok((data, _bytes)) => {
+                        match self.parse_fills(&data, fetch_date) {
+                            Ok(fills) => {
+                                debug!("Fetched {} fills from {}", fills.len(), fetch_date.format("%Y-%m-%d %H:00"));
+                                all_fills.extend(fills);
+                            }
+                            Err(e) => {
+                                debug!("Failed to parse fills for {}: {}", fetch_date.format("%Y-%m-%d %H:00"), e);
+                            }
+                        }
+                    }
+                    Err(Error::Validation(msg)) if msg.contains("does not exist") => {
+                        debug!("No data for {}", fetch_date.format("%Y-%m-%d %H:00"));
+                    }
+                    Err(e) => {
+                        debug!("Failed to fetch {}: {}", fetch_date.format("%Y-%m-%d %H:00"), e);
+                    }
+                }
+            }
+        }
+
+        info!("Fetched {} total fills from {} hours in parallel", all_fills.len(), hours_to_fetch);
+        Ok(all_fills)
+    }
 }
 
 #[async_trait]
@@ -331,7 +402,7 @@ impl IngestSource for S3Source {
         cursor: Option<String>,
     ) -> Result<IngestBatch> {
         // Parse cursor to determine current position
-        let (current_date, current_hour) = if let Some(cursor) = cursor {
+        let (current_date, current_hour) = if let Some(cursor) = cursor.clone() {
             let parts: Vec<&str> = cursor.split('_').collect();
             if parts.len() == 2 {
                 let date = NaiveDate::parse_from_str(parts[0], "%Y%m%d")
@@ -346,7 +417,29 @@ impl IngestSource for S3Source {
             (start_from, start_from.hour())
         };
 
-        // Fetch data for the current hour
+        // Use parallel fetching for better performance - fetch 8 hours at a time
+        const HOURS_PER_BATCH: usize = 8;
+
+        // If we have enough hours ahead, fetch in parallel
+        let hours_until_now = ((Utc::now() - current_date).num_hours() as usize).min(HOURS_PER_BATCH);
+
+        if hours_until_now >= 4 {
+            // Fetch multiple hours in parallel
+            let fills = self.fetch_parallel_batch(current_date, hours_until_now).await?;
+
+            // Calculate cursor for next batch
+            let next_date = current_date + chrono::Duration::hours(hours_until_now as i64);
+            let next_cursor = format!("{}_{}", next_date.format("%Y%m%d"), next_date.hour());
+
+            return Ok(IngestBatch {
+                fills,
+                cursor: Some(next_cursor),
+                has_more: next_date < Utc::now(),
+                bytes_downloaded: None,
+            });
+        }
+
+        // Fall back to single hour fetch if near the end
         let (data, bytes_downloaded) = match self.fetch_hour_data(current_date, current_hour).await {
             Ok((data, bytes)) => (data, bytes),
             Err(Error::Validation(msg)) if msg.contains("does not exist") => {
