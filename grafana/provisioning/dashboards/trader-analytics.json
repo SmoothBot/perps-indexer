@@ -1,0 +1,1250 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "${datasource}"
+      },
+      "description": "Distribution of traders by trading volume tiers",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            }
+          },
+          "mappings": [],
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "displayLabels": ["percent", "name"],
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true,
+          "values": ["value", "percent"]
+        },
+        "pieType": "donut",
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.3.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  NOW() as time,\n  CASE\n    WHEN total_volume >= 10000000 THEN 'Mega Whales (>$10M)'\n    WHEN total_volume >= 1000000 THEN 'Whales ($1M-$10M)'\n    WHEN total_volume >= 100000 THEN 'Large Traders ($100K-$1M)'\n    WHEN total_volume >= 10000 THEN 'Medium Traders ($10K-$100K)'\n    ELSE 'Small Traders (<$10K)'\n  END as metric,\n  COUNT(*)::float as value\nFROM trader_summary\nWHERE exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}')\nGROUP BY metric\nORDER BY value DESC",
+          "refId": "A"
+        }
+      ],
+      "title": "Trader Distribution by Volume Tier",
+      "type": "piechart"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "${datasource}"
+      },
+      "description": "Volume concentration showing how much of total volume comes from top traders",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "continuous-GrYlRd"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "% of Total Volume",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 30,
+            "gradientMode": "scheme",
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.3.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH cumulative_volume AS (\n  SELECT\n    ROW_NUMBER() OVER (ORDER BY total_volume DESC) as rank,\n    SUM(total_volume) OVER (ORDER BY total_volume DESC) as cumulative_vol,\n    SUM(total_volume) OVER () as total_vol\n  FROM trader_summary\n  WHERE exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}')\n)\nSELECT\n  rank as \"Top N Traders\",\n  (cumulative_vol / NULLIF(total_vol, 0) * 100)::float as \"Volume %\"\nFROM cumulative_volume\nWHERE rank IN (1, 5, 10, 20, 50, 100, 200, 500)\nORDER BY rank",
+          "refId": "A"
+        }
+      ],
+      "title": "Market Concentration (Cumulative Volume %)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "${datasource}"
+      },
+      "description": "Key statistics about the trader population",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total Unique Traders"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "blue",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Active Today"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Active This Week"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "yellow",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Avg Volume per Trader"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 16,
+        "y": 0
+      },
+      "id": 3,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "values": false,
+          "calcs": ["lastNotNull"],
+          "fields": ""
+        },
+        "showPercentChange": false,
+        "textMode": "value_and_name",
+        "wideLayout": true
+      },
+      "pluginVersion": "11.3.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  COUNT(DISTINCT user_address) as \"Total Unique Traders\",\n  COUNT(DISTINCT CASE WHEN last_trade_time >= NOW() - INTERVAL '24 hours' THEN user_address END) as \"Active Today\",\n  COUNT(DISTINCT CASE WHEN last_trade_time >= NOW() - INTERVAL '7 days' THEN user_address END) as \"Active This Week\",\n  AVG(total_volume)::numeric as \"Avg Volume per Trader\"\nFROM trader_summary\nWHERE exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}')",
+          "refId": "A"
+        }
+      ],
+      "title": "Trader Population Statistics",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "${datasource}"
+      },
+      "description": "Average trade metrics segmented by trader tier",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Avg Trade Size"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gradient-gauge",
+                  "mode": "gradient"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "continuous-BlYlRd"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Avg Trades/Day"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 1
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gradient-gauge",
+                  "mode": "gradient"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "continuous-GrYlRd"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total PnL"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "rgba(255, 255, 255, 0)",
+                      "value": 0
+                    },
+                    {
+                      "color": "green",
+                      "value": 0.01
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Trader Count"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 4
+      },
+      "id": 4,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": ["sum"],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "11.3.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH trader_tiers AS (\n  SELECT\n    user_address,\n    total_volume,\n    avg_trade_size,\n    total_trades,\n    total_pnl,\n    EXTRACT(EPOCH FROM (last_trade_time - first_trade_time)) / 86400.0 as trading_days,\n    CASE\n      WHEN total_volume >= 10000000 THEN 'Mega Whales (>$10M)'\n      WHEN total_volume >= 1000000 THEN 'Whales ($1M-$10M)'\n      WHEN total_volume >= 100000 THEN 'Large Traders ($100K-$1M)'\n      WHEN total_volume >= 10000 THEN 'Medium Traders ($10K-$100K)'\n      ELSE 'Small Traders (<$10K)'\n    END as tier\n  FROM trader_summary\n  WHERE exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}')\n)\nSELECT\n  tier as \"Trader Tier\",\n  COUNT(*) as \"Trader Count\",\n  AVG(avg_trade_size)::numeric as \"Avg Trade Size\",\n  AVG(CASE WHEN trading_days > 0 THEN total_trades / trading_days ELSE 0 END)::numeric as \"Avg Trades/Day\",\n  SUM(total_pnl)::numeric as \"Total PnL\"\nFROM trader_tiers\nGROUP BY tier\nORDER BY\n  CASE tier\n    WHEN 'Mega Whales (>$10M)' THEN 1\n    WHEN 'Whales ($1M-$10M)' THEN 2\n    WHEN 'Large Traders ($100K-$1M)' THEN 3\n    WHEN 'Medium Traders ($10K-$100K)' THEN 4\n    ELSE 5\n  END",
+          "refId": "A"
+        }
+      ],
+      "title": "Trading Behavior by Trader Tier",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "${datasource}"
+      },
+      "description": "Distribution of average trade sizes across all traders",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "Number of Traders",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "gradientMode": "hue",
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 8
+      },
+      "id": 5,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.3.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  NOW() as time,\n  CASE\n    WHEN avg_trade_size < 100 THEN '<$100'\n    WHEN avg_trade_size < 500 THEN '$100-$500'\n    WHEN avg_trade_size < 1000 THEN '$500-$1K'\n    WHEN avg_trade_size < 5000 THEN '$1K-$5K'\n    WHEN avg_trade_size < 10000 THEN '$5K-$10K'\n    WHEN avg_trade_size < 50000 THEN '$10K-$50K'\n    WHEN avg_trade_size < 100000 THEN '$50K-$100K'\n    ELSE '>$100K'\n  END as metric,\n  COUNT(*)::float as value\nFROM trader_summary ts\nWHERE ts.exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}')\n  AND ('${market}' = 'All' OR EXISTS (\n    SELECT 1 FROM trader_market_summary tms\n    WHERE tms.user_address = ts.user_address\n      AND tms.exchange_id = ts.exchange_id\n      AND tms.symbol = '${market}'\n  ))\nGROUP BY metric\nORDER BY\n  MIN(CASE\n    WHEN avg_trade_size < 100 THEN 1\n    WHEN avg_trade_size < 500 THEN 2\n    WHEN avg_trade_size < 1000 THEN 3\n    WHEN avg_trade_size < 5000 THEN 4\n    WHEN avg_trade_size < 10000 THEN 5\n    WHEN avg_trade_size < 50000 THEN 6\n    WHEN avg_trade_size < 100000 THEN 7\n    ELSE 8\n  END)",
+          "refId": "A"
+        }
+      ],
+      "title": "Average Trade Size Distribution",
+      "type": "piechart"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "${datasource}"
+      },
+      "description": "Distribution of trading frequency (trades per day)",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "Number of Traders",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "gradientMode": "hue",
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 8
+      },
+      "id": 6,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.3.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "WITH trade_frequency AS (\n  SELECT\n    user_address,\n    total_trades,\n    GREATEST(EXTRACT(EPOCH FROM (last_trade_time - first_trade_time)) / 86400.0, 1) as trading_days,\n    total_trades / GREATEST(EXTRACT(EPOCH FROM (last_trade_time - first_trade_time)) / 86400.0, 1) as trades_per_day\n  FROM trader_summary ts\n  WHERE ts.exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}')\n    AND ('${market}' = 'All' OR EXISTS (\n      SELECT 1 FROM trader_market_summary tms\n      WHERE tms.user_address = ts.user_address\n        AND tms.exchange_id = ts.exchange_id\n        AND tms.symbol = '${market}'\n    ))\n)\nSELECT\n  NOW() as time,\n  CASE\n    WHEN trades_per_day < 1 THEN '<1 trade/day'\n    WHEN trades_per_day < 5 THEN '1-5 trades/day'\n    WHEN trades_per_day < 10 THEN '5-10 trades/day'\n    WHEN trades_per_day < 25 THEN '10-25 trades/day'\n    WHEN trades_per_day < 50 THEN '25-50 trades/day'\n    WHEN trades_per_day < 100 THEN '50-100 trades/day'\n    ELSE '>100 trades/day'\n  END as metric,\n  COUNT(*)::float as value\nFROM trade_frequency\nGROUP BY metric\nORDER BY\n  MIN(CASE\n    WHEN trades_per_day < 1 THEN 1\n    WHEN trades_per_day < 5 THEN 2\n    WHEN trades_per_day < 10 THEN 3\n    WHEN trades_per_day < 25 THEN 4\n    WHEN trades_per_day < 50 THEN 5\n    WHEN trades_per_day < 100 THEN 6\n    ELSE 7\n  END)",
+          "refId": "A"
+        }
+      ],
+      "title": "Trade Frequency Distribution",
+      "type": "piechart"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "${datasource}"
+      },
+      "description": "Top performing traders by total PnL",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Trader"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Inspect",
+                    "url": "/d/address-inspector/address-inspector?var-address=${__data.fields[\"Full Address\"]}"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total PnL"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "rgba(255, 255, 255, 0)",
+                      "value": 0
+                    },
+                    {
+                      "color": "green",
+                      "value": 0.01
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total Volume"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Win Rate"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gradient-gauge",
+                  "mode": "gradient"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "continuous-RdYlGr"
+                }
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "max",
+                "value": 100
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total Trades"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Avg Trade Size"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Full Address"
+            },
+            "properties": [
+              {
+                "id": "custom.hidden",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "id": 7,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": ["sum"],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Total PnL"
+          }
+        ]
+      },
+      "pluginVersion": "11.3.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  CONCAT(LEFT(ts.user_address, 6), '...', RIGHT(ts.user_address, 4)) as \"Trader\",\n  ts.user_address as \"Full Address\",\n  ts.total_pnl::numeric as \"Total PnL\",\n  ts.total_volume::numeric as \"Total Volume\",\n  CASE\n    WHEN ts.total_trades > 0 AND ts.total_pnl > 0 THEN 60.0\n    WHEN ts.total_trades > 0 AND ts.total_pnl < 0 THEN 40.0\n    ELSE 50.0\n  END as \"Win Rate\",\n  ts.total_trades as \"Total Trades\",\n  ts.avg_trade_size::numeric as \"Avg Trade Size\"\nFROM trader_summary ts\nWHERE ts.exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}')\n  AND ('${market}' = 'All' OR EXISTS (\n    SELECT 1 FROM trader_market_summary tms\n    WHERE tms.user_address = ts.user_address\n      AND tms.exchange_id = ts.exchange_id\n      AND tms.symbol = '${market}'\n  ))\nORDER BY ts.total_pnl DESC NULLS LAST\nLIMIT 20",
+          "refId": "A"
+        }
+      ],
+      "title": "Top Traders by PnL Performance",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "${datasource}"
+      },
+      "description": "Number of unique traders active over time",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "none",
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 12
+      },
+      "id": 8,
+      "options": {
+        "legend": {
+          "calcs": ["mean", "max"],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "11.3.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  hour as time,\n  COUNT(DISTINCT user_address) as \"Active Traders\"\nFROM hourly_user_stats hus\nJOIN markets m ON hus.market_id = m.id\nWHERE hus.exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}')\n  AND ('${market}' = 'All' OR m.symbol = '${market}')\n  AND $__timeFilter(hour)\nGROUP BY hour\nORDER BY hour",
+          "refId": "A"
+        }
+      ],
+      "title": "Active Traders Over Time",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "${datasource}"
+      },
+      "description": "Markets ranked by unique trader participation",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Market"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 120
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Unique Traders"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gradient-gauge",
+                  "mode": "gradient"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "continuous-GrYlRd"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total Volume"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Avg Volume/Trader"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Market Type"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 100
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "options": {
+                      "perp": {
+                        "color": "purple",
+                        "index": 0
+                      },
+                      "spot": {
+                        "color": "green",
+                        "index": 1
+                      }
+                    },
+                    "type": "value"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 22
+      },
+      "id": 9,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": ["sum"],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "Unique Traders"
+          }
+        ]
+      },
+      "pluginVersion": "11.3.1",
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  symbol as \"Market\",\n  market_type as \"Market Type\",\n  COUNT(DISTINCT user_address) as \"Unique Traders\",\n  SUM(total_volume)::numeric as \"Total Volume\",\n  (SUM(total_volume) / COUNT(DISTINCT user_address))::numeric as \"Avg Volume/Trader\"\nFROM trader_market_summary\nWHERE exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}')\nGROUP BY symbol, market_type\nHAVING COUNT(DISTINCT user_address) > 10\nORDER BY COUNT(DISTINCT user_address) DESC\nLIMIT 20",
+          "refId": "A"
+        }
+      ],
+      "title": "Most Popular Markets by Trader Count",
+      "type": "table"
+    }
+  ],
+  "refresh": "",
+  "schemaVersion": 39,
+  "tags": ["hyperliquid", "traders", "analytics"],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "HL",
+          "value": "HL"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "${datasource}"
+        },
+        "definition": "SELECT code, name FROM exchanges ORDER BY code",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Exchange",
+        "multi": false,
+        "name": "exchange",
+        "options": [],
+        "query": "SELECT code, name FROM exchanges ORDER BY code",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "All",
+          "value": "All"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "${datasource}"
+        },
+        "definition": "SELECT 'All' as symbol UNION ALL SELECT DISTINCT symbol FROM markets WHERE exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}') AND symbol IS NOT NULL ORDER BY symbol",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Market",
+        "multi": false,
+        "name": "market",
+        "options": [],
+        "query": "SELECT 'All' as symbol UNION ALL SELECT DISTINCT symbol FROM markets WHERE exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}') AND symbol IS NOT NULL ORDER BY symbol",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "PostgreSQL-Hyperliquid",
+          "value": "PostgreSQL-Hyperliquid"
+        },
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "postgres",
+        "queryValue": "",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": ["30s", "1m", "5m", "15m", "30m", "1h"]
+  },
+  "timezone": "browser",
+  "title": "Trader Analytics",
+  "uid": "trader-analytics",
+  "version": 1,
+  "weekStart": ""
+}

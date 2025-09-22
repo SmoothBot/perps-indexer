@@ -123,7 +123,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "\nSELECT \n    date_trunc('hour', f.timestamp) as time,\n    SUM(f.price * f.size) as \"Volume\"\nFROM fills f\nJOIN markets m ON f.market_id = m.id\nWHERE \n    f.exchange_id = 1\n    AND $__timeFilter(f.timestamp)\n    AND (m.market_type = '${market_type}' OR '${market_type}' = 'All')\nGROUP BY 1\nORDER BY 1\n",
+          "rawSql": "\nSELECT\n    hour as time,\n    SUM(total_volume) as \"Volume\"\nFROM hourly_market_stats hms\nJOIN markets m ON hms.market_id = m.id\nWHERE\n    hms.exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}')\n    AND $__timeFilter(hour)\n    AND (m.market_type = '${market_type}' OR '${market_type}' = 'All')\nGROUP BY hour\nORDER BY hour\n",
           "refId": "A",
           "sql": {
             "columns": [
@@ -379,7 +379,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  SUM(volume)::float AS \"Total Volume\"\nFROM hourly_user_stats hus JOIN markets m ON hus.market_id = m.id\nWHERE $__timeFilter(hour)\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')",
+          "rawSql": "SELECT \n  SUM(hus.total_volume)::float AS \"Total Volume\"\nFROM hourly_user_stats hus \nJOIN markets m ON hus.market_id = m.id\nWHERE hus.exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}')\n  AND $__timeFilter(hus.hour)\n  AND ('${market_type}' = 'All' OR m.market_type = LOWER('${market_type}'))",
           "refId": "A"
         }
       ],
@@ -522,7 +522,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "\nSELECT \n    NOW() as time,\n    COALESCE(m.symbol, 'Unknown') as metric,\n    SUM(f.price * f.size)::float as value\nFROM fills f\nLEFT JOIN markets m ON f.market_id = m.id\nWHERE \n    f.exchange_id = 1\n    AND $__timeFilter(f.timestamp)\n    AND (m.market_type = '${market_type}' OR '${market_type}' = 'All')\nGROUP BY m.symbol\nORDER BY value DESC\nLIMIT 10\n",
+          "rawSql": "\nSELECT \n    NOW() as time,\n    symbol as metric,\n    total_volume::float as value\nFROM market_summary\nWHERE \n    exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}')\n    AND (market_type = '${market_type}' OR '${market_type}' = 'All')\n    AND total_volume > 0\nORDER BY total_volume DESC\nLIMIT 10\n",
           "refId": "A",
           "alias": "$2"
         }
@@ -742,7 +742,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "\nSELECT \n    date_trunc('hour', f.timestamp) as time,\n    COUNT(DISTINCT f.user_address) as \"Active Traders\"\nFROM fills f\nJOIN markets m ON f.market_id = m.id\nWHERE \n    f.exchange_id = 1\n    AND $__timeFilter(f.timestamp)\n    AND (m.market_type = '${market_type}' OR '${market_type}' = 'All')\nGROUP BY 1\nORDER BY 1\n",
+          "rawSql": "\nSELECT\n    hour as time,\n    SUM(unique_traders) as \"Active Traders\"\nFROM hourly_market_stats hms\nJOIN markets m ON hms.market_id = m.id\nWHERE\n    hms.exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}')\n    AND $__timeFilter(hour)\n    AND (m.market_type = '${market_type}' OR '${market_type}' = 'All')\nGROUP BY hour\nORDER BY hour\n",
           "refId": "A"
         }
       ],
@@ -880,7 +880,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "\nSELECT \n    user_address as \"Trader\",\n    COUNT(*) as \"Trades\",\n    SUM(price * size) as \"Volume\",\n    SUM(COALESCE(closed_pnl, 0)) as \"Total PnL\",\n    SUM(COALESCE(fee, 0)) as \"Total Fees\"\nFROM fills\nWHERE \n    exchange_id = 1\n    AND $__timeFilter(timestamp)\nGROUP BY user_address\nORDER BY 3 DESC\nLIMIT 10\n",
+          "rawSql": "\nSELECT \n    user_address as \"Trader\",\n    total_trades as \"Trades\",\n    total_volume as \"Volume\",\n    total_pnl as \"Total PnL\",\n    total_fees as \"Total Fees\"\nFROM trader_summary\nWHERE \n    exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}')\nORDER BY total_volume DESC\nLIMIT 10\n",
           "refId": "A"
         }
       ],
@@ -972,7 +972,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "\nWITH hourly_fees AS (\n    SELECT \n        date_trunc('hour', f.timestamp) as hour,\n        SUM(COALESCE(f.fee, 0)) as hour_fee\n    FROM fills f\n    JOIN markets m ON f.market_id = m.id\n    WHERE \n        f.exchange_id = 1\n        AND $__timeFilter(f.timestamp)\n        AND (m.market_type = '${market_type}' OR '${market_type}' = 'All')\n    GROUP BY 1\n)\nSELECT \n    hour as time,\n    SUM(hour_fee) OVER (ORDER BY hour) as \"Cumulative Fees\"\nFROM hourly_fees\nORDER BY hour\n",
+          "rawSql": "\nSELECT\n    hour as time,\n    SUM(SUM(total_fees)) OVER (ORDER BY hour) as \"Cumulative Fees\"\nFROM hourly_market_stats hms\nJOIN markets m ON hms.market_id = m.id\nWHERE\n    hms.exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}')\n    AND $__timeFilter(hour)\n    AND (m.market_type = '${market_type}' OR '${market_type}' = 'All')\nGROUP BY hour\nORDER BY hour\n",
           "refId": "A"
         }
       ],
@@ -1080,7 +1080,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "\nSELECT \n    date_trunc('hour', f.timestamp) as time,\n    COUNT(*) as \"Total Trades\"\nFROM fills f\nJOIN markets m ON f.market_id = m.id\nWHERE \n    f.exchange_id = 1\n    AND $__timeFilter(f.timestamp)\n    AND (m.market_type = '${market_type}' OR '${market_type}' = 'All')\nGROUP BY 1\nORDER BY 1\n",
+          "rawSql": "\nSELECT\n    hour as time,\n    SUM(trade_count) as \"Total Trades\"\nFROM hourly_market_stats hms\nJOIN markets m ON hms.market_id = m.id\nWHERE\n    hms.exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}')\n    AND $__timeFilter(hour)\n    AND (m.market_type = '${market_type}' OR '${market_type}' = 'All')\nGROUP BY hour\nORDER BY hour\n",
           "refId": "A",
           "sql": {
             "columns": [
@@ -1115,6 +1115,30 @@
   ],
   "templating": {
     "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "HL",
+          "value": "HL"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "${datasource}"
+        },
+        "definition": "SELECT code, name FROM exchanges ORDER BY code",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Exchange",
+        "multi": false,
+        "name": "exchange",
+        "options": [],
+        "query": "SELECT code, name FROM exchanges ORDER BY code",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
       {
         "current": {
           "selected": false,
@@ -1185,7 +1209,7 @@
     ]
   },
   "time": {
-    "from": "now-24h",
+    "from": "now-7d",
     "to": "now"
   },
   "timepicker": {},

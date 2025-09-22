@@ -17,20 +17,19 @@
   },
   "editable": true,
   "fiscalYearStartMonth": 0,
-  "graphTooltip": 0,
+  "graphTooltip": 1,
   "id": null,
   "links": [],
+  "liveNow": false,
   "panels": [
     {
       "datasource": {
         "type": "postgres",
-        "uid": "PostgreSQL-Hyperliquid"
+        "uid": "${datasource}"
       },
+      "description": "Overview of all markets with trading activity in the selected time range",
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
           "custom": {
             "align": "auto",
             "cellOptions": {
@@ -53,50 +52,33 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Symbol"
+              "options": "symbol"
             },
             "properties": [
               {
+                "id": "displayName",
+                "value": "Symbol"
+              },
+              {
                 "id": "custom.width",
                 "value": 150
-              },
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "type": "color-text",
-                  "color": {
-                    "mode": "thresholds"
-                  }
-                }
-              },
-              {
-                "id": "thresholds",
-                "value": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "blue",
-                      "value": null
-                    }
-                  ]
-                }
               }
             ]
           },
           {
             "matcher": {
               "id": "byName",
-              "options": "Market Type"
+              "options": "market_type"
             },
             "properties": [
               {
-                "id": "custom.width",
-                "value": 100
+                "id": "displayName",
+                "value": "Type"
               },
               {
                 "id": "custom.cellOptions",
                 "value": {
-                  "type": "color-background"
+                  "type": "color-text"
                 }
               },
               {
@@ -104,12 +86,12 @@
                 "value": [
                   {
                     "options": {
-                      "perp": {
-                        "color": "purple",
-                        "index": 0
-                      },
                       "spot": {
                         "color": "green",
+                        "index": 0
+                      },
+                      "perp": {
+                        "color": "blue",
                         "index": 1
                       }
                     },
@@ -122,61 +104,21 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Total Trades"
+              "options": "total_volume"
             },
             "properties": [
               {
-                "id": "custom.width",
-                "value": 120
-              },
-              {
-                "id": "unit",
-                "value": "short"
-              },
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "type": "gradient-gauge",
-                  "mode": "gradient"
-                }
-              },
-              {
-                "id": "color",
-                "value": {
-                  "mode": "continuous-GrYlRd"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Total Volume (USD)"
-            },
-            "properties": [
-              {
-                "id": "custom.width",
-                "value": 150
+                "id": "displayName",
+                "value": "Total Volume"
               },
               {
                 "id": "unit",
                 "value": "currencyUSD"
               },
               {
-                "id": "decimals",
-                "value": 0
-              },
-              {
                 "id": "custom.cellOptions",
                 "value": {
-                  "type": "gradient-gauge",
-                  "mode": "gradient"
-                }
-              },
-              {
-                "id": "color",
-                "value": {
-                  "mode": "continuous-BlYlRd"
+                  "type": "gradient-gauge"
                 }
               }
             ]
@@ -184,92 +126,91 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Unique Traders"
+              "options": "total_trades"
             },
             "properties": [
               {
-                "id": "custom.width",
-                "value": 120
-              },
-              {
-                "id": "unit",
-                "value": "short"
+                "id": "displayName",
+                "value": "# Trades"
               }
             ]
           },
           {
             "matcher": {
               "id": "byName",
-              "options": "Avg Trade Size (USD)"
+              "options": "unique_traders"
             },
             "properties": [
               {
-                "id": "custom.width",
-                "value": 150
+                "id": "displayName",
+                "value": "# Traders"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "avg_trade_size"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Avg Trade Size"
               },
               {
                 "id": "unit",
                 "value": "currencyUSD"
-              },
-              {
-                "id": "decimals",
-                "value": 2
               }
             ]
           },
           {
             "matcher": {
               "id": "byName",
-              "options": "Last Trade"
+              "options": "buy_volume"
             },
             "properties": [
               {
-                "id": "custom.width",
-                "value": 180
+                "id": "displayName",
+                "value": "Buy Volume"
               },
               {
                 "id": "unit",
-                "value": "dateTimeAsLocal"
+                "value": "currencyUSD"
               }
             ]
           },
           {
             "matcher": {
               "id": "byName",
-              "options": "Market ID"
+              "options": "sell_volume"
             },
             "properties": [
               {
-                "id": "custom.width",
-                "value": 100
+                "id": "displayName",
+                "value": "Sell Volume"
               },
               {
-                "id": "custom.cellOptions",
-                "value": {
-                  "type": "color-text",
-                  "color": {
-                    "mode": "thresholds"
-                  }
-                }
-              },
+                "id": "unit",
+                "value": "currencyUSD"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "last_trade"
+            },
+            "properties": [
               {
-                "id": "thresholds",
-                "value": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "text",
-                      "value": null
-                    }
-                  ]
-                }
+                "id": "displayName",
+                "value": "Last Trade"
               }
             ]
           }
         ]
       },
       "gridPos": {
-        "h": 20,
+        "h": 12,
         "w": 24,
         "x": 0,
         "y": 0
@@ -289,21 +230,21 @@
         "sortBy": [
           {
             "desc": true,
-            "displayName": "Total Volume (USD)"
+            "displayName": "total_volume"
           }
         ]
       },
-      "pluginVersion": "11.3.1",
+      "pluginVersion": "10.0.0",
       "targets": [
         {
           "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "hl-postgres"
+            "type": "postgres",
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n    m.market_id as \"Market ID\",\n    m.symbol as \"Symbol\",\n    m.market_type as \"Market Type\",\n    COALESCE(m.base_asset, m.market_id) as \"Base Asset\",\n    COALESCE(m.quote_asset, 'USD') as \"Quote Asset\",\n    COUNT(f.id) as \"Total Trades\",\n    COUNT(DISTINCT f.user_address) as \"Unique Traders\",\n    COALESCE(SUM(f.price * f.size), 0)::numeric as \"Total Volume (USD)\",\n    CASE \n        WHEN COUNT(f.id) > 0 THEN (SUM(f.price * f.size) / COUNT(f.id))::numeric\n        ELSE 0\n    END as \"Avg Trade Size (USD)\",\n    MAX(f.timestamp) as \"Last Trade\",\n    CASE \n        WHEN m.is_active THEN 'Active'\n        ELSE 'Inactive'\n    END as \"Status\"\nFROM \n    markets m\nLEFT JOIN \n    fills f ON m.id = f.market_id\nWHERE \n    m.exchange_id = (SELECT id FROM exchanges WHERE name = '${exchange:text}')\n    AND (\n        CASE \n            WHEN '${market_type:text}' = 'All' THEN true\n            ELSE m.market_type = LOWER('${market_type:text}')\n        END\n    )\nGROUP BY \n    m.id, m.market_id, m.symbol, m.market_type, m.base_asset, m.quote_asset, m.is_active\nORDER BY \n    \"Total Volume (USD)\" DESC;",
+          "rawSql": "WITH market_stats AS (\n  SELECT \n    hms.market_id,\n    hms.symbol,\n    hms.market_type,\n    SUM(hms.total_volume) as total_volume,\n    SUM(hms.buy_volume) as buy_volume,\n    SUM(hms.sell_volume) as sell_volume,\n    SUM(hms.trade_count) as total_trades,\n    COUNT(DISTINCT hms.hour) as active_hours,\n    MAX(hms.hour) as last_trade,\n    SUM(hms.unique_traders) as unique_traders\n  FROM hourly_market_stats hms\n  WHERE hms.exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}')\n    AND $__timeFilter(hour)\n  GROUP BY hms.market_id, hms.symbol, hms.market_type\n)\nSELECT \n  symbol,\n  market_type,\n  total_volume::numeric,\n  buy_volume::numeric,\n  sell_volume::numeric,\n  total_trades,\n  unique_traders,\n  CASE \n    WHEN total_trades > 0 THEN (total_volume / total_trades)::numeric \n    ELSE 0 \n  END as avg_trade_size,\n  last_trade\nFROM market_stats\nWHERE ('${market_type}' = 'All' OR market_type = '${market_type}')\nORDER BY total_volume DESC",
           "refId": "A",
           "sql": {
             "columns": [
@@ -330,8 +271,9 @@
     {
       "datasource": {
         "type": "postgres",
-        "uid": "PostgreSQL-Hyperliquid"
+        "uid": "${datasource}"
       },
+      "description": "Distribution of market types in the selected time range",
       "fieldConfig": {
         "defaults": {
           "custom": {
@@ -348,74 +290,48 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 6,
+        "w": 8,
         "x": 0,
-        "y": 20
+        "y": 12
       },
       "id": 2,
       "options": {
-        "reduceOptions": {
-          "values": false,
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": ""
-        },
-        "pieType": "pie",
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        },
+        "displayLabels": [
+          "name",
+          "percent"
+        ],
         "legend": {
           "displayMode": "table",
           "placement": "right",
           "showLegend": true,
           "values": [
-            "value",
-            "percent"
+            "value"
           ]
         },
-        "displayLabels": [
-          "percent"
-        ],
-        "legendDisplayMode": "table",
-        "legendPlacement": "right",
-        "legendShowLegend": true,
-        "legendValues": [
-          "value",
-          "percent"
-        ]
+        "pieType": "donut",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
       },
-      "pluginVersion": "11.3.1",
       "targets": [
         {
           "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "hl-postgres"
+            "type": "postgres",
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT NOW() as time, \n    UPPER(market_type) as \"Market Type\",\n    COUNT(*) as \"Count\"\nFROM \n    markets\nWHERE \n    exchange_id = (SELECT id FROM exchanges WHERE name = '${exchange:text}')\n    AND is_active = true\nGROUP BY \n    market_type;",
-          "refId": "A",
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          },
-          "alias": "$2"
+          "rawSql": "SELECT \n  NOW() as time,\n  UPPER(hms.market_type) as metric,\n  COUNT(DISTINCT hms.market_id)::float as value\nFROM hourly_market_stats hms\nWHERE hms.exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}')\n  AND $__timeFilter(hour)\n  AND hms.trade_count > 0\nGROUP BY hms.market_type",
+          "refId": "A"
         }
       ],
       "title": "Market Type Distribution",
@@ -424,7 +340,7 @@
     {
       "datasource": {
         "type": "postgres",
-        "uid": "PostgreSQL-Hyperliquid"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -447,57 +363,37 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 6,
-        "x": 6,
-        "y": 20
+        "w": 4,
+        "x": 8,
+        "y": 12
       },
       "id": 3,
       "options": {
         "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
+        "graphMode": "none",
+        "justifyMode": "center",
         "orientation": "auto",
-        "percentChangeColorMode": "standard",
         "reduceOptions": {
-          "values": false,
-          "fields": "",
           "calcs": [
             "lastNotNull"
-          ]
+          ],
+          "fields": "",
+          "values": false
         },
-        "showPercentChange": false,
-        "textMode": "auto",
-        "wideLayout": true
+        "textMode": "auto"
       },
-      "pluginVersion": "11.3.1",
+      "pluginVersion": "10.0.0",
       "targets": [
         {
           "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "hl-postgres"
+            "type": "postgres",
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n    COUNT(*) as \"Total Markets\"\nFROM \n    markets\nWHERE \n    exchange_id = (SELECT id FROM exchanges WHERE name = '${exchange:text}')\n    AND is_active = true;",
-          "refId": "A",
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          }
+          "rawSql": "SELECT \n  COUNT(DISTINCT market_id) as \"Total Markets\"\nFROM hourly_market_stats\nWHERE exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}')\n  AND $__timeFilter(hour)\n  AND trade_count > 0",
+          "refId": "A"
         }
       ],
       "title": "Total Active Markets",
@@ -506,19 +402,20 @@
     {
       "datasource": {
         "type": "postgres",
-        "uid": "PostgreSQL-Hyperliquid"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "fixedColor": "blue",
+            "mode": "fixed"
           },
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "purple",
+                "color": "blue",
                 "value": null
               }
             ]
@@ -529,71 +426,52 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 6,
+        "w": 4,
         "x": 12,
-        "y": 20
+        "y": 12
       },
       "id": 4,
       "options": {
         "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
+        "graphMode": "none",
+        "justifyMode": "center",
         "orientation": "auto",
-        "percentChangeColorMode": "standard",
         "reduceOptions": {
-          "values": false,
-          "fields": "",
           "calcs": [
             "lastNotNull"
-          ]
+          ],
+          "fields": "",
+          "values": false
         },
-        "showPercentChange": false,
-        "textMode": "auto",
-        "wideLayout": true
+        "textMode": "auto"
       },
-      "pluginVersion": "11.3.1",
+      "pluginVersion": "10.0.0",
       "targets": [
         {
           "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "hl-postgres"
+            "type": "postgres",
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n    COUNT(*) as \"Perpetual Markets\"\nFROM \n    markets\nWHERE \n    exchange_id = (SELECT id FROM exchanges WHERE name = '${exchange:text}')\n    AND market_type = 'perp'\n    AND is_active = true;",
-          "refId": "A",
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          }
+          "rawSql": "WITH market_totals AS (\n  SELECT \n    market_id,\n    SUM(trade_count) as total_trades\n  FROM hourly_market_stats\n  WHERE exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}')\n    AND market_type = 'perp'\n    AND $__timeFilter(hour)\n  GROUP BY market_id\n)\nSELECT COUNT(*) as \"Active Perp Markets\"\nFROM market_totals\nWHERE total_trades >= 1000",
+          "refId": "A"
         }
       ],
-      "title": "Perpetual Markets",
+      "title": "Active Perp Markets (>1000 trades)",
       "type": "stat"
     },
     {
       "datasource": {
         "type": "postgres",
-        "uid": "PostgreSQL-Hyperliquid"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "fixedColor": "green",
+            "mode": "fixed"
           },
           "mappings": [],
           "thresholds": {
@@ -611,80 +489,185 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 6,
-        "x": 18,
-        "y": 20
+        "w": 4,
+        "x": 16,
+        "y": 12
       },
       "id": 5,
       "options": {
         "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
+        "graphMode": "none",
+        "justifyMode": "center",
         "orientation": "auto",
-        "percentChangeColorMode": "standard",
         "reduceOptions": {
-          "values": false,
-          "fields": "",
           "calcs": [
             "lastNotNull"
-          ]
+          ],
+          "fields": "",
+          "values": false
         },
-        "showPercentChange": false,
-        "textMode": "auto",
-        "wideLayout": true
+        "textMode": "auto"
       },
-      "pluginVersion": "11.3.1",
+      "pluginVersion": "10.0.0",
       "targets": [
         {
           "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "hl-postgres"
+            "type": "postgres",
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n    COUNT(*) as \"Spot Markets\"\nFROM \n    markets\nWHERE \n    exchange_id = (SELECT id FROM exchanges WHERE name = '${exchange:text}')\n    AND market_type = 'spot'\n    AND is_active = true;",
-          "refId": "A",
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          }
+          "rawSql": "WITH market_totals AS (\n  SELECT \n    market_id,\n    SUM(trade_count) as total_trades\n  FROM hourly_market_stats\n  WHERE exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}')\n    AND market_type = 'spot'\n    AND $__timeFilter(hour)\n  GROUP BY market_id\n)\nSELECT COUNT(*) as \"Active Spot Markets\"\nFROM market_totals\nWHERE total_trades >= 1000",
+          "refId": "A"
         }
       ],
-      "title": "Spot Markets",
+      "title": "Active Spot Markets (>1000 trades)",
       "type": "stat"
     },
     {
       "datasource": {
         "type": "postgres",
-        "uid": "PostgreSQL-Hyperliquid"
+        "uid": "${datasource}"
       },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "red",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 12
+      },
+      "id": 8,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH market_totals AS (\n  SELECT \n    market_id,\n    SUM(trade_count) as total_trades\n  FROM hourly_market_stats\n  WHERE exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}')\n    AND market_type = 'perp'\n    AND $__timeFilter(hour)\n  GROUP BY market_id\n)\nSELECT COUNT(*) as \"Dead Perp Markets\"\nFROM market_totals\nWHERE total_trades < 1000",
+          "refId": "A"
+        }
+      ],
+      "title": "Dead Perp Markets (<1000 trades)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "${datasource}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "red",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 16
+      },
+      "id": 9,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH market_totals AS (\n  SELECT \n    market_id,\n    SUM(trade_count) as total_trades\n  FROM hourly_market_stats\n  WHERE exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}')\n    AND market_type = 'spot'\n    AND $__timeFilter(hour)\n  GROUP BY market_id\n)\nSELECT COUNT(*) as \"Dead Spot Markets\"\nFROM market_totals\nWHERE total_trades < 1000",
+          "refId": "A"
+        }
+      ],
+      "title": "Dead Spot Markets (<1000 trades)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "${datasource}"
+      },
+      "description": "Top markets by trading volume in the selected time range",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "barWidthFactor": 0.6,
             "drawStyle": "bars",
             "fillOpacity": 100,
             "gradientMode": "none",
@@ -726,84 +709,196 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 18,
-        "x": 6,
-        "y": 24
+        "w": 16,
+        "x": 8,
+        "y": 16
       },
       "id": 6,
       "options": {
+        "barRadius": 0,
+        "barWidth": 0.8,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
         "legend": {
           "calcs": [],
           "displayMode": "list",
           "placement": "bottom",
           "showLegend": false
         },
+        "orientation": "vertical",
+        "showValue": "auto",
+        "stacking": "none",
         "tooltip": {
           "mode": "single",
           "sort": "none"
-        }
+        },
+        "xField": "symbol",
+        "xTickLabelRotation": 45,
+        "xTickLabelSpacing": 0
       },
-      "pluginVersion": "11.3.1",
       "targets": [
         {
           "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "hl-postgres"
+            "type": "postgres",
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n    m.symbol as \"Market\",\n    COALESCE(SUM(f.price * f.size), 0)::numeric as \"Volume\"\nFROM \n    markets m\nLEFT JOIN \n    fills f ON m.id = f.market_id\nWHERE \n    m.exchange_id = (SELECT id FROM exchanges WHERE name = '${exchange:text}')\n    AND m.is_active = true\n    AND (\n        CASE \n            WHEN '${market_type:text}' = 'All' THEN true\n            ELSE m.market_type = LOWER('${market_type:text}')\n        END\n    )\nGROUP BY \n    m.symbol\nHAVING \n    SUM(f.price * f.size) > 0\nORDER BY \n    \"Volume\" DESC\nLIMIT 20;",
-          "refId": "A",
-          "sql": {
-            "columns": [
-              {
-                "parameters": [],
-                "type": "function"
-              }
-            ],
-            "groupBy": [
-              {
-                "property": {
-                  "type": "string"
-                },
-                "type": "groupBy"
-              }
-            ],
-            "limit": 50
-          }
+          "rawSql": "SELECT \n  hms.symbol,\n  SUM(hms.total_volume)::numeric as \"Volume\"\nFROM hourly_market_stats hms\nWHERE hms.exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}')\n  AND ('${market_type}' = 'All' OR hms.market_type = '${market_type}')\n  AND $__timeFilter(hour)\nGROUP BY hms.symbol\nHAVING SUM(hms.total_volume) > 0\nORDER BY \"Volume\" DESC\nLIMIT 20",
+          "refId": "A"
         }
       ],
-      "title": "Top 20 Markets by Volume",
+      "title": "Top Markets by Volume",
       "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "${datasource}"
+      },
+      "description": "Trading volume over time for all markets",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "Volume (USD)",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "currencyUSD"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 24
+      },
+      "id": 7,
+      "options": {
+        "legend": {
+          "calcs": [
+            "sum"
+          ],
+          "displayMode": "list",
+          "placement": "right",
+          "showLegend": true,
+          "width": 200
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "WITH top_markets AS (\n  SELECT \n    symbol,\n    SUM(total_volume) as total_vol\n  FROM hourly_market_stats\n  WHERE exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}')\n    AND ('${market_type}' = 'All' OR market_type = '${market_type}')\n    AND $__timeFilter(hour)\n  GROUP BY symbol\n  ORDER BY total_vol DESC\n  LIMIT 10\n)\nSELECT \n  hms.hour as time,\n  hms.symbol as metric,\n  SUM(hms.total_volume)::float as value\nFROM hourly_market_stats hms\nJOIN top_markets tm ON hms.symbol = tm.symbol\nWHERE hms.exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}')\n  AND ('${market_type}' = 'All' OR hms.market_type = '${market_type}')\n  AND $__timeFilter(hour)\nGROUP BY hms.hour, hms.symbol\nORDER BY hms.hour",
+          "refId": "A"
+        }
+      ],
+      "title": "Volume Over Time - Top 10 Markets",
+      "type": "timeseries"
     }
   ],
   "refresh": "",
-  "schemaVersion": 39,
+  "schemaVersion": 38,
+  "style": "dark",
   "tags": [
-    "hyperliquid",
-    "markets"
+    "markets",
+    "overview"
   ],
   "templating": {
     "list": [
       {
         "current": {
           "selected": false,
-          "text": "Hyperliquid",
-          "value": "Hyperliquid"
+          "text": "HL",
+          "value": "HL"
         },
         "datasource": {
           "type": "postgres",
-          "uid": "PostgreSQL-Hyperliquid"
+          "uid": "${datasource}"
         },
-        "definition": "SELECT name FROM exchanges WHERE is_active = true",
+        "definition": "SELECT code, name FROM exchanges ORDER BY code",
         "hide": 0,
         "includeAll": false,
         "label": "Exchange",
         "multi": false,
         "name": "exchange",
         "options": [],
-        "query": "SELECT name FROM exchanges WHERE is_active = true",
+        "query": "SELECT code, name FROM exchanges ORDER BY code",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "allValue": "All",
+        "current": {
+          "selected": false,
+          "text": "All",
+          "value": "All"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "${datasource}"
+        },
+        "definition": "SELECT 'All' AS market_type UNION SELECT 'spot' UNION SELECT 'perp' ORDER BY 1",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Market Type",
+        "multi": false,
+        "name": "market_type",
+        "options": [],
+        "query": "SELECT 'All' AS market_type UNION SELECT 'spot' UNION SELECT 'perp' ORDER BY 1",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -812,36 +907,21 @@
       },
       {
         "current": {
-          "selected": true,
-          "text": "All",
-          "value": "All"
+          "selected": false,
+          "text": "PostgreSQL-Hyperliquid",
+          "value": "PostgreSQL-Hyperliquid"
         },
-        "hide": 0,
+        "hide": 2,
         "includeAll": false,
-        "label": "Market Type",
         "multi": false,
-        "name": "market_type",
-        "options": [
-          {
-            "selected": true,
-            "text": "All",
-            "value": "All"
-          },
-          {
-            "selected": false,
-            "text": "Perp",
-            "value": "Perp"
-          },
-          {
-            "selected": false,
-            "text": "Spot",
-            "value": "Spot"
-          }
-        ],
-        "query": "All,Perp,Spot",
+        "name": "datasource",
+        "options": [],
+        "query": "postgres",
         "queryValue": "",
+        "refresh": 1,
+        "regex": "",
         "skipUrlSync": false,
-        "type": "custom"
+        "type": "datasource"
       }
     ]
   },
@@ -849,16 +929,8 @@
     "from": "now-7d",
     "to": "now"
   },
-  "timepicker": {
-    "refresh_intervals": [
-      "30s",
-      "1m",
-      "5m",
-      "15m",
-      "30m"
-    ]
-  },
-  "timezone": "browser",
+  "timepicker": {},
+  "timezone": "",
   "title": "Markets Overview",
   "uid": "markets-overview",
   "version": 1,

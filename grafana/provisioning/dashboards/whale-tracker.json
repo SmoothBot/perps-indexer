@@ -291,7 +291,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH trader_activity AS (\n  SELECT \n    f.user_address,\n    SUM(CASE WHEN f.side = 'BUY' THEN f.price * f.size ELSE 0 END) as total_buy_volume,\n    SUM(CASE WHEN f.side = 'SELL' THEN f.price * f.size ELSE 0 END) as total_sell_volume,\n    SUM(CASE WHEN f.side = 'BUY' THEN f.price * f.size ELSE -f.price * f.size END) as net_volume,\n    COUNT(*) as trade_count,\n    SUM(f.price * f.size) / COUNT(*) as avg_trade_size,\n    SUM(COALESCE(f.closed_pnl, 0)) as total_pnl\n  FROM fills f\n  JOIN markets m ON f.market_id = m.id\n  WHERE \n    m.symbol = '${coin}'\n    AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n    AND $__timeFilter(f.timestamp)\n  GROUP BY f.user_address\n  HAVING ABS(SUM(CASE WHEN f.side = 'BUY' THEN f.price * f.size ELSE -f.price * f.size END)) > ${min_volume}\n)\nSELECT \n  user_address,\n  net_volume,\n  total_buy_volume,\n  total_sell_volume,\n  trade_count,\n  avg_trade_size,\n  total_pnl\nFROM trader_activity\nORDER BY ABS(net_volume) DESC\nLIMIT 100",
+          "rawSql": "WITH trader_activity AS (\n  SELECT \n    f.user_address,\n    SUM(CASE WHEN f.side = 'BUY' THEN f.price * f.size ELSE 0 END) as total_buy_volume,\n    SUM(CASE WHEN f.side = 'SELL' THEN f.price * f.size ELSE 0 END) as total_sell_volume,\n    SUM(CASE WHEN f.side = 'BUY' THEN f.price * f.size ELSE -f.price * f.size END) as net_volume,\n    COUNT(*) as trade_count,\n    SUM(f.price * f.size) / COUNT(*) as avg_trade_size,\n    SUM(COALESCE(f.closed_pnl, 0)) as total_pnl\n  FROM fills f\n  JOIN markets m ON f.market_id = m.id\n  WHERE \n    ('${coin}' = 'All' OR m.symbol = '${coin}')\n    AND f.exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}')\n    AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n    AND $__timeFilter(f.timestamp)\n  GROUP BY f.user_address\n  HAVING ABS(SUM(CASE WHEN f.side = 'BUY' THEN f.price * f.size ELSE -f.price * f.size END)) > ${min_volume}\n)\nSELECT \n  user_address,\n  net_volume,\n  total_buy_volume,\n  total_sell_volume,\n  trade_count,\n  avg_trade_size,\n  total_pnl\nFROM trader_activity\nORDER BY ABS(net_volume) DESC\nLIMIT 100",
           "refId": "A"
         }
       ],
@@ -385,7 +385,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "WITH top_traders AS (\n  SELECT \n    f.user_address,\n    ABS(SUM(CASE WHEN f.side = 'BUY' THEN f.price * f.size ELSE -f.price * f.size END)) as abs_net_volume\n  FROM fills f\n  JOIN markets m ON f.market_id = m.id\n  WHERE \n    m.symbol = '${coin}'\n    AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n    AND $__timeFilter(f.timestamp)\n  GROUP BY f.user_address\n  ORDER BY abs_net_volume DESC\n  LIMIT 10\n)\nSELECT \n  f.timestamp as time,\n  CONCAT(LEFT(f.user_address, 6), '...', RIGHT(f.user_address, 4)) as metric,\n  SUM(SUM(CASE WHEN f.side = 'BUY' THEN f.price * f.size ELSE -f.price * f.size END)) OVER (PARTITION BY f.user_address ORDER BY f.timestamp) as value\nFROM fills f\nJOIN markets m ON f.market_id = m.id\nJOIN top_traders t ON f.user_address = t.user_address\nWHERE \n  m.symbol = '${coin}'\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n  AND $__timeFilter(f.timestamp)\nGROUP BY f.timestamp, f.user_address\nORDER BY f.timestamp",
+          "rawSql": "WITH top_traders AS (\n  SELECT \n    f.user_address,\n    ABS(SUM(CASE WHEN f.side = 'BUY' THEN f.price * f.size ELSE -f.price * f.size END)) as abs_net_volume\n  FROM fills f\n  JOIN markets m ON f.market_id = m.id\n  WHERE \n    ('${coin}' = 'All' OR m.symbol = '${coin}')\n    AND f.exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}')\n    AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n    AND $__timeFilter(f.timestamp)\n  GROUP BY f.user_address\n  ORDER BY abs_net_volume DESC\n  LIMIT 10\n)\nSELECT \n  f.timestamp as time,\n  CONCAT(LEFT(f.user_address, 6), '...', RIGHT(f.user_address, 4)) as metric,\n  SUM(SUM(CASE WHEN f.side = 'BUY' THEN f.price * f.size ELSE -f.price * f.size END)) OVER (PARTITION BY f.user_address ORDER BY f.timestamp) as value\nFROM fills f\nJOIN markets m ON f.market_id = m.id\nJOIN top_traders t ON f.user_address = t.user_address\nWHERE \n  ('${coin}' = 'All' OR m.symbol = '${coin}')\n  AND f.exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}')\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n  AND $__timeFilter(f.timestamp)\nGROUP BY f.timestamp, f.user_address\nORDER BY f.timestamp",
           "refId": "A"
         }
       ],
@@ -482,7 +482,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT \n  DATE_TRUNC('hour', f.timestamp) as time,\n  SUM(CASE WHEN f.side = 'BUY' THEN f.price * f.size ELSE -f.price * f.size END) as \"Net Volume\"\nFROM fills f\nJOIN markets m ON f.market_id = m.id\nWHERE \n  m.symbol = '${coin}'\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n  AND $__timeFilter(f.timestamp)\nGROUP BY 1\nORDER BY 1",
+          "rawSql": "SELECT\n  hour as time,\n  SUM(net_volume) as \"Net Volume\"\nFROM hourly_market_stats hms\nJOIN markets m ON hms.market_id = m.id\nWHERE\n  ('${coin}' = 'All' OR m.symbol = '${coin}')\n  AND hms.exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}')\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n  AND $__timeFilter(hour)\nGROUP BY hour\nORDER BY hour",
           "refId": "A"
         }
       ],
@@ -552,7 +552,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "WITH trader_volumes AS (\n  SELECT \n    f.user_address,\n    SUM(f.price * f.size) as total_volume\n  FROM fills f\n  JOIN markets m ON f.market_id = m.id\n  WHERE \n    m.symbol = '${coin}'\n    AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n    AND $__timeFilter(f.timestamp)\n  GROUP BY f.user_address\n)\nSELECT \n  NOW() as time,\n  CASE \n    WHEN total_volume > 10000000 THEN 'Whales (>$10M)' \n    WHEN total_volume > 1000000 THEN 'Large Traders ($1M-$10M)'\n    WHEN total_volume > 100000 THEN 'Medium Traders ($100K-$1M)'\n    ELSE 'Small Traders (<$100K)'\n  END as metric,\n  SUM(total_volume)::float as value\nFROM trader_volumes\nGROUP BY metric\nORDER BY value DESC",
+          "rawSql": "WITH trader_volumes AS (\n  SELECT \n    f.user_address,\n    SUM(f.price * f.size) as total_volume\n  FROM fills f\n  JOIN markets m ON f.market_id = m.id\n  WHERE \n    ('${coin}' = 'All' OR m.symbol = '${coin}')\n    AND f.exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}')\n    AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n    AND $__timeFilter(f.timestamp)\n  GROUP BY f.user_address\n)\nSELECT \n  NOW() as time,\n  CASE \n    WHEN total_volume > 10000000 THEN 'Whales (>$10M)' \n    WHEN total_volume > 1000000 THEN 'Large Traders ($1M-$10M)'\n    WHEN total_volume > 100000 THEN 'Medium Traders ($100K-$1M)'\n    ELSE 'Small Traders (<$100K)'\n  END as metric,\n  SUM(total_volume)::float as value\nFROM trader_volumes\nGROUP BY metric\nORDER BY value DESC",
           "refId": "A",
           "alias": "$2"
         }
@@ -801,7 +801,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  f.timestamp,\n  CONCAT(LEFT(f.user_address, 6), '...', RIGHT(f.user_address, 4)) as user_address,\n  f.side,\n  f.price,\n  f.size,\n  f.price * f.size as volume,\n  COALESCE(f.closed_pnl, 0) as closed_pnl\nFROM fills f\nJOIN markets m ON f.market_id = m.id\nWHERE \n  m.symbol = '${coin}'\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n  AND f.price * f.size > ${large_trade_threshold}\n  AND $__timeFilter(f.timestamp)\nORDER BY f.timestamp DESC\nLIMIT 100",
+          "rawSql": "SELECT \n  lt.timestamp,\n  CONCAT(LEFT(lt.user_address, 6), '...', RIGHT(lt.user_address, 4)) as user_address,\n  lt.side,\n  lt.price,\n  lt.size,\n  lt.volume_usd as volume,\n  COALESCE(lt.closed_pnl, 0) as closed_pnl,\n  lt.trade_class\nFROM large_trades lt\nWHERE \n  ('${coin}' = 'All' OR lt.symbol = '${coin}')\n  AND lt.exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}')\n  AND ('${market_type}' = 'All' OR lt.market_type = LOWER('${market_type}'))\n  AND lt.volume_usd > ${large_trade_threshold}\n  AND $__timeFilter(lt.timestamp)\nORDER BY lt.timestamp DESC\nLIMIT 100",
           "refId": "A"
         }
       ],
@@ -896,7 +896,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH trader_net AS (\n  SELECT \n    f.user_address,\n    SUM(CASE WHEN f.side = 'BUY' THEN f.price * f.size ELSE -f.price * f.size END) as net_volume\n  FROM fills f\n  JOIN markets m ON f.market_id = m.id\n  WHERE \n    m.symbol = '${coin}'\n    AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n    AND $__timeFilter(f.timestamp)\n  GROUP BY f.user_address\n  HAVING ABS(SUM(CASE WHEN f.side = 'BUY' THEN f.price * f.size ELSE -f.price * f.size END)) > ${min_volume}\n)\nSELECT \n  CONCAT(LEFT(user_address, 6), '...', RIGHT(user_address, 4)) as trader,\n  net_volume\nFROM (\n  SELECT * FROM trader_net\n  ORDER BY net_volume DESC\n  LIMIT 10\n) buyers\nUNION ALL\nSELECT \n  CONCAT(LEFT(user_address, 6), '...', RIGHT(user_address, 4)) as trader,\n  net_volume\nFROM (\n  SELECT * FROM trader_net\n  ORDER BY net_volume ASC\n  LIMIT 10\n) sellers\nORDER BY net_volume DESC",
+          "rawSql": "WITH trader_net AS (\n  SELECT \n    f.user_address,\n    SUM(CASE WHEN f.side = 'BUY' THEN f.price * f.size ELSE -f.price * f.size END) as net_volume\n  FROM fills f\n  JOIN markets m ON f.market_id = m.id\n  WHERE \n    ('${coin}' = 'All' OR m.symbol = '${coin}')\n    AND f.exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}')\n    AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n    AND $__timeFilter(f.timestamp)\n  GROUP BY f.user_address\n  HAVING ABS(SUM(CASE WHEN f.side = 'BUY' THEN f.price * f.size ELSE -f.price * f.size END)) > ${min_volume}\n)\nSELECT \n  CONCAT(LEFT(user_address, 6), '...', RIGHT(user_address, 4)) as trader,\n  net_volume\nFROM (\n  SELECT * FROM trader_net\n  ORDER BY net_volume DESC\n  LIMIT 10\n) buyers\nUNION ALL\nSELECT \n  CONCAT(LEFT(user_address, 6), '...', RIGHT(user_address, 4)) as trader,\n  net_volume\nFROM (\n  SELECT * FROM trader_net\n  ORDER BY net_volume ASC\n  LIMIT 10\n) sellers\nORDER BY net_volume DESC",
           "refId": "A"
         }
       ],
@@ -1177,7 +1177,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT \n  m.symbol,\n  m.market_type,\n  SUM(f.price * f.size) as total_volume,\n  SUM(CASE WHEN f.side = 'BUY' THEN f.price * f.size ELSE 0 END) as buy_volume,\n  SUM(CASE WHEN f.side = 'SELL' THEN f.price * f.size ELSE 0 END) as sell_volume,\n  SUM(CASE WHEN f.side = 'BUY' THEN f.price * f.size ELSE -f.price * f.size END) as net_volume,\n  COUNT(*) as trade_count,\n  COUNT(DISTINCT f.user_address) as unique_traders,\n  SUM(f.price * f.size) / COUNT(*) as avg_trade_size\nFROM fills f\nJOIN markets m ON f.market_id = m.id\nWHERE \n  ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n  AND $__timeFilter(f.timestamp)\nGROUP BY m.symbol, m.market_type\nHAVING SUM(f.price * f.size) > 0\nORDER BY total_volume DESC\nLIMIT 50",
+          "rawSql": "SELECT \n  symbol,\n  market_type,\n  total_volume,\n  buy_volume,\n  sell_volume,\n  (buy_volume - sell_volume) as net_volume,\n  total_trades as trade_count,\n  unique_traders,\n  avg_trade_size\nFROM market_summary\nWHERE \n  exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}')\n  AND ('${market_type}' = 'All' OR market_type = '${market_type}')\n  AND total_volume > 0\nORDER BY total_volume DESC\nLIMIT 50",
           "refId": "A"
         }
       ],
@@ -1195,6 +1195,30 @@
   ],
   "templating": {
     "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "HL",
+          "value": "HL"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "${datasource}"
+        },
+        "definition": "SELECT code, name FROM exchanges ORDER BY code",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Exchange",
+        "multi": false,
+        "name": "exchange",
+        "options": [],
+        "query": "SELECT code, name FROM exchanges ORDER BY code",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
       {
         "current": {
           "selected": false,
@@ -1223,14 +1247,14 @@
           "type": "postgres",
           "uid": "${datasource}"
         },
-        "definition": "SELECT DISTINCT symbol FROM markets WHERE symbol IS NOT NULL ORDER BY symbol",
+        "definition": "SELECT 'All' as symbol UNION ALL SELECT DISTINCT symbol FROM markets WHERE symbol IS NOT NULL AND exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}') ORDER BY symbol",
         "hide": 0,
         "includeAll": false,
         "label": "Token",
         "multi": false,
         "name": "coin",
         "options": [],
-        "query": "SELECT DISTINCT symbol FROM markets WHERE symbol IS NOT NULL ORDER BY symbol",
+        "query": "SELECT 'All' as symbol UNION ALL SELECT DISTINCT symbol FROM markets WHERE symbol IS NOT NULL AND exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}') ORDER BY symbol",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,

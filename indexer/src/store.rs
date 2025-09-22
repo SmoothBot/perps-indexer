@@ -433,46 +433,76 @@ impl Store {
 
     #[instrument(skip(self))]
     pub async fn refresh_hourly_stats_view(&self) -> Result<()> {
-        // Check if the materialized view exists first
-        let view_exists = sqlx::query!(
-            r#"
-            SELECT EXISTS (
-                SELECT 1
-                FROM pg_matviews
-                WHERE schemaname = 'public'
-                AND matviewname = 'hourly_user_stats'
-            ) as "exists!"
-            "#
-        )
-        .fetch_one(&self.pool)
-        .await?;
+        // Track refresh time for performance monitoring
+        let start = std::time::Instant::now();
 
-        if view_exists.exists {
-            // Track refresh time for performance monitoring
-            let start = std::time::Instant::now();
+        // List of materialized views to refresh
+        let views = [
+            // Original views
+            "hourly_user_stats",
+            "hourly_market_stats",
+            "hourly_exchange_stats",
+            "market_summary",
+            // New trader analytics views
+            "trader_summary",
+            "trader_market_summary",
+            "daily_market_stats",
+            "large_trades",
+            "hourly_ingest_stats",
+        ];
 
-            // Only refresh if the view exists
-            match sqlx::query!("REFRESH MATERIALIZED VIEW CONCURRENTLY hourly_user_stats")
-                .execute(&self.pool)
-                .await
-            {
-                Ok(_) => {
-                    let elapsed = start.elapsed();
-                    info!(
-                        duration_ms = elapsed.as_millis(),
-                        "Refreshed hourly_user_stats materialized view"
-                    );
-                    counter!("indexer_materialized_view_refreshes", "view" => "hourly_user_stats").increment(1);
+        for view in &views {
+            // Check if the materialized view exists first
+            let view_exists = sqlx::query!(
+                r#"
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM pg_matviews
+                    WHERE schemaname = 'public'
+                    AND matviewname = $1
+                ) as "exists!"
+                "#,
+                view
+            )
+            .fetch_one(&self.pool)
+            .await?;
+
+            if view_exists.exists {
+                // Only refresh if the view exists
+                let query = format!("REFRESH MATERIALIZED VIEW CONCURRENTLY {}", view);
+                match sqlx::query(&query)
+                    .execute(&self.pool)
+                    .await
+                {
+                    Ok(_) => {
+                        let elapsed = start.elapsed();
+                        info!(
+                            view = view,
+                            duration_ms = elapsed.as_millis(),
+                            "Refreshed materialized view"
+                        );
+                        counter!("indexer_materialized_view_refreshes", "view" => view).increment(1);
+                    }
+                    Err(e) => {
+                        // Log error but don't fail the operation
+                        warn!(
+                            view = view,
+                            error = %e,
+                            "Failed to refresh materialized view"
+                        );
+                        counter!("indexer_materialized_view_refresh_errors", "view" => view).increment(1);
+                    }
                 }
-                Err(e) => {
-                    // Log error but don't fail the operation
-                    warn!("Failed to refresh materialized view: {:?}", e);
-                    counter!("indexer_materialized_view_refresh_errors", "view" => "hourly_user_stats").increment(1);
-                }
+            } else {
+                debug!(view = view, "Materialized view does not exist yet");
             }
-        } else {
-            debug!("Materialized view hourly_user_stats does not exist yet");
         }
+
+        let total_elapsed = start.elapsed();
+        info!(
+            total_duration_ms = total_elapsed.as_millis(),
+            "Completed refreshing all materialized views"
+        );
 
         Ok(())
     }

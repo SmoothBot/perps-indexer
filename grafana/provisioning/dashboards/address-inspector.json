@@ -147,7 +147,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "\nSELECT \n    SUM(f.price * f.size) as \"Volume\"\nFROM fills f\nJOIN markets m ON f.market_id = m.id\nWHERE \n    LOWER(f.user_address) = LOWER('${address}')\n    AND f.exchange_id = 1\n    AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n    AND $__timeFilter(f.timestamp)\n",
+          "rawSql": "\nSELECT \n    total_volume as \"Volume\"\nFROM trader_summary\nWHERE \n    LOWER(user_address) = LOWER('${address}')\n    AND exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}')\n",
           "refId": "A"
         }
       ],
@@ -363,7 +363,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "\nSELECT \n    f.timestamp as time,\n    SUM(COALESCE(f.closed_pnl, 0)) OVER (ORDER BY f.timestamp) as \"Cumulative PnL\"\nFROM fills f\nJOIN markets m ON f.market_id = m.id\nWHERE \n    LOWER(f.user_address) = LOWER('${address}')\n    AND f.exchange_id = 1\n    AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n    AND $__timeFilter(f.timestamp)\nORDER BY f.timestamp\n",
+          "rawSql": "\nSELECT \n    hour as time,\n    SUM(total_pnl) OVER (ORDER BY hour) as \"Cumulative PnL\"\nFROM hourly_user_stats\nWHERE \n    LOWER(user_address) = LOWER('${address}')\n    AND exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}')\n    AND $__timeFilter(hour)\nORDER BY hour\n",
           "refId": "A"
         }
       ],
@@ -492,7 +492,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "\nSELECT \n    date_trunc('hour', f.timestamp) as time,\n    SUM(CASE WHEN f.side = 'BUY' THEN f.price * f.size ELSE 0 END) as \"buy_volume\",\n    SUM(CASE WHEN f.side = 'SELL' THEN f.price * f.size ELSE 0 END) as \"sell_volume\"\nFROM fills f\nJOIN markets m ON f.market_id = m.id\nWHERE \n    LOWER(f.user_address) = LOWER('${address}')\n    AND f.exchange_id = 1\n    AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n    AND $__timeFilter(f.timestamp)\nGROUP BY 1\nORDER BY 1\n",
+          "rawSql": "\nSELECT\n    hour as time,\n    SUM(buy_volume) as \"buy_volume\",\n    SUM(sell_volume) as \"sell_volume\"\nFROM hourly_user_stats hus\nJOIN markets m ON hus.market_id = m.id\nWHERE\n    LOWER(hus.user_address) = LOWER('${address}')\n    AND hus.exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}')\n    AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n    AND $__timeFilter(hour)\nGROUP BY hour\nORDER BY hour\n",
           "refId": "A"
         }
       ],
@@ -615,7 +615,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "\nSELECT \n    COALESCE(m.symbol, 'Unknown') as \"Coin\",\n    COUNT(*) as \"Trades\",\n    SUM(f.price * f.size) as \"Volume\",\n    SUM(COALESCE(f.closed_pnl, 0)) as \"PnL\",\n    SUM(COALESCE(f.fee, 0)) as \"Fees\"\nFROM fills f\nLEFT JOIN markets m ON f.market_id = m.id\nWHERE \n    LOWER(f.user_address) = LOWER('${address}')\n    AND f.exchange_id = 1\n    AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n    AND $__timeFilter(f.timestamp)\nGROUP BY COALESCE(m.symbol, 'Unknown')\nORDER BY \"Volume\" DESC\n",
+          "rawSql": "\nSELECT \n    symbol as \"Coin\",\n    total_trades as \"Trades\",\n    total_volume as \"Volume\",\n    total_pnl as \"PnL\",\n    total_fees as \"Fees\"\nFROM trader_market_summary\nWHERE \n    LOWER(user_address) = LOWER('${address}')\n    AND exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}')\n    AND ('${market_type}' = 'All' OR market_type = '${market_type}')\nORDER BY total_volume DESC\n",
           "refId": "A"
         }
       ],
@@ -690,7 +690,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "\nSELECT \n    NOW() as time,\n    COALESCE(m.symbol, 'Unknown') as metric,\n    SUM(f.price * f.size)::float as value\nFROM fills f\nLEFT JOIN markets m ON f.market_id = m.id\nWHERE \n    LOWER(f.user_address) = LOWER('${address}')\n    AND f.exchange_id = 1\n    AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n    AND $__timeFilter(f.timestamp)\nGROUP BY m.symbol\nHAVING SUM(f.price * f.size) > 0\nORDER BY value DESC\nLIMIT 15\n",
+          "rawSql": "\nSELECT \n    NOW() as time,\n    symbol as metric,\n    total_volume::float as value\nFROM trader_market_summary\nWHERE \n    LOWER(user_address) = LOWER('${address}')\n    AND exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}')\n    AND ('${market_type}' = 'All' OR market_type = '${market_type}')\n    AND total_volume > 0\nORDER BY total_volume DESC\nLIMIT 15\n",
           "refId": "A",
           "alias": "$2"
         }
@@ -826,7 +826,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "\nSELECT \n    f.timestamp as \"Time\",\n    COALESCE(m.symbol, 'Unknown') as \"Coin\",\n    f.side as \"Side\",\n    f.price as \"Price\",\n    f.size as \"Size\",\n    f.price * f.size as \"Volume\",\n    COALESCE(f.fee, 0) as \"Fee\",\n    COALESCE(f.closed_pnl, 0) as \"PnL\"\nFROM fills f\nLEFT JOIN markets m ON f.market_id = m.id\nWHERE \n    LOWER(f.user_address) = LOWER('${address}')\n    AND f.exchange_id = 1\n    AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n    AND $__timeFilter(f.timestamp)\nORDER BY f.timestamp DESC\nLIMIT 100\n",
+          "rawSql": "\nSELECT \n    f.timestamp as \"Time\",\n    COALESCE(m.symbol, 'Unknown') as \"Coin\",\n    f.side as \"Side\",\n    f.price as \"Price\",\n    f.size as \"Size\",\n    f.price * f.size as \"Volume\",\n    COALESCE(f.fee, 0) as \"Fee\",\n    COALESCE(f.closed_pnl, 0) as \"PnL\"\nFROM fills f\nLEFT JOIN markets m ON f.market_id = m.id\nWHERE \n    LOWER(f.user_address) = LOWER('${address}')\n    AND f.exchange_id = (SELECT id FROM exchanges WHERE code = '${exchange}')\n    AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n    AND $__timeFilter(f.timestamp)\nORDER BY f.timestamp DESC\nLIMIT 100\n",
           "refId": "A"
         }
       ],
@@ -1012,7 +1012,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT \n  DATE_TRUNC('hour', timestamp) AS time,\n  COUNT(*) AS trade_count\nFROM fills f JOIN markets m ON f.market_id = m.id\nWHERE user_address = '${address}'\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n  AND $__timeFilter(timestamp)\nGROUP BY time\nORDER BY time",
+          "rawSql": "SELECT\n  hour AS time,\n  SUM(trade_count) AS trade_count\nFROM hourly_user_stats hus JOIN markets m ON hus.market_id = m.id\nWHERE user_address = '${address}'\n  AND ('${market_type}' = 'All' OR m.market_type = '${market_type}')\n  AND $__timeFilter(hour)\nGROUP BY hour\nORDER BY hour",
           "refId": "A"
         }
       ],
@@ -1030,6 +1030,30 @@
   ],
   "templating": {
     "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "HL",
+          "value": "HL"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "${datasource}"
+        },
+        "definition": "SELECT code, name FROM exchanges ORDER BY code",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Exchange",
+        "multi": false,
+        "name": "exchange",
+        "options": [],
+        "query": "SELECT code, name FROM exchanges ORDER BY code",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
       {
         "current": {
           "selected": false,
@@ -1076,8 +1100,8 @@
       {
         "current": {
           "selected": false,
-          "text": "0x0000000000000000000000000000000000000000",
-          "value": "0x0000000000000000000000000000000000000000"
+          "text": "0x7b7f72a28fe109fa703eeed7984f2a8a68fedee2",
+          "value": "0x7b7f72a28fe109fa703eeed7984f2a8a68fedee2"
         },
         "description": "Enter the address to inspect",
         "hide": 0,
@@ -1086,11 +1110,11 @@
         "options": [
           {
             "selected": true,
-            "text": "0x0000000000000000000000000000000000000000",
-            "value": "0x0000000000000000000000000000000000000000"
+            "text": "0x7b7f72a28fe109fa703eeed7984f2a8a68fedee2",
+            "value": "0x7b7f72a28fe109fa703eeed7984f2a8a68fedee2"
           }
         ],
-        "query": "0x0000000000000000000000000000000000000000",
+        "query": "0x7b7f72a28fe109fa703eeed7984f2a8a68fedee2",
         "skipUrlSync": false,
         "type": "textbox"
       }
